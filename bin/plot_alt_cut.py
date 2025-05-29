@@ -29,6 +29,10 @@ def get_args():
                         default = 3, type = int, \
                         help = 'variable to plot (number)')
 
+    parser.add_argument('-tec',  default = False, \
+                        action='store_true',
+                        help = 'plot total electron content (TEC)')
+
     # User can set max and min of the colorbar:
     parser.add_argument('-mini',  default = 1e32, type = float, \
                         help = 'manually set the minimum value for the plots')
@@ -59,22 +63,39 @@ if __name__ == '__main__':
     # Get the input arguments
     args = get_args()
     filelist = args.filelist
-    varToPlot = [args.ivar]
-    altGoal = args.alt
+    if (args.tec):
+        varToPlot = [34]
+    else:
+        varToPlot = [args.ivar]
 
     allData = gitmio.read_gitm_all_files(filelist, varToPlot)
 
-    alts1d = allData['alts'][0, 0, :]
-    diff = np.abs(alts1d - altGoal)
-    iAlt = np.argmin(diff)
-    realAlt = alts1d[iAlt]
+    if (not args.tec):
+        altGoal = args.alt
+        alts1d = allData['alts'][0, 0, :]
+        diff = np.abs(alts1d - altGoal)
+        iAlt = np.argmin(diff)
+        realAlt = alts1d[iAlt]
+    else:
+        realAlt = -1.0
+        iAlt = 0
 
     lons1d = allData['lons'][:, 0, iAlt]
     lats1d = allData['lats'][0, :, iAlt]
     lonsEdge = utils.move_centers_to_edges(lons1d)
     latsEdge = utils.move_centers_to_edges(lats1d)
 
-    allSlices = utils.data_slice(allData, iAlt = iAlt)
+    if (args.tec):
+        allSlices = utils.calc_tec(allData)
+        varName = 'TEC'
+        sVarNum = 'varTEC_'
+        sAltNum = ''
+    else:
+        allSlices = utils.data_slice(allData, iAlt = iAlt)
+        varName = allData['vars'][0]
+        sVarNum = 'var%03d_' % args.ivar
+        sAltNum = 'alt%04d_' % int(realAlt)
+
     allTimes = allData['times']
 
     # get min and max values, plus color table:
@@ -84,9 +105,6 @@ if __name__ == '__main__':
                      minVal = 1e32, maxVal = -1e32)
 
     dpi = 120
-    varName = allData['vars'][0]
-    sVarNum = 'var%03d_' % args.ivar
-    sAltNum = 'alt%04d_' % int(realAlt)
 
     for iTime, uTime in enumerate(allTimes):
 
@@ -94,7 +112,8 @@ if __name__ == '__main__':
         ax = fig.add_axes([0.07, 0.06, 0.97, 0.9])
 
         title = uTime.strftime("%d %b %Y %H:%M:%S UT")
-        title = title + '; Alt: %.0f km' % realAlt
+        if (not args.tec):
+            title = title + '; Alt: %.0f km' % realAlt
         value2d = allSlices[iTime, :, :].transpose()
         con = ax.pcolormesh(lonsEdge, latsEdge, value2d, \
                             cmap = dataMinMax['cmap'], \

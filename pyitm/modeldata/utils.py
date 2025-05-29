@@ -55,3 +55,41 @@ def move_centers_to_edges(pos):
     return edges
 
 
+#-----------------------------------------------------------------------------
+# vertically integrate the 3D data given the altitudes.
+#-----------------------------------------------------------------------------
+
+def vertically_integrate(value, alts, calc3D = False):
+    [nLons, nLats, nAlts] = value.shape
+    integrated = np.zeros((nLons, nLats, nAlts))
+    descending = np.arange(nAlts-2, -1, -1)
+    dz = alts[:,:,-1] - alts[:,:,-2]
+    integrated[:,:,-1] = value[:,:,-1] * dz
+    for i in descending:
+        dz = alts[:,:,i+1] - alts[:,:,i]
+        integrated[:,:,i] = integrated[:,:,i+1] + value[:,:,i] * dz
+    if (not calc3D):
+        integrated = integrated[:,:,0]
+    return integrated
+
+#-----------------------------------------------------------------------------
+# Calculate TEC using the integration function
+#  --> Assume that we are giving it the [e-] as a variable!
+#-----------------------------------------------------------------------------
+
+def calc_tec(allData3D):
+    nTimes = allData3D['nTimes']
+    nVars = allData3D['nVars']
+    nLons = allData3D['nLons']
+    nLats = allData3D['nLats']
+    alts1d = allData3D['alts']
+
+    slices = np.zeros((nTimes, nLons, nLats))
+    for iTime in range(nTimes):
+        tec2d = vertically_integrate(allData3D['data'][iTime, :, :, :], alts1d)
+        # Convert km->m and /m3 to TECU
+        slices[iTime, :, :] = tec2d[:, :] * 1000.0 / 1e16
+    return slices
+
+
+
