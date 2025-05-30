@@ -185,8 +185,7 @@ def read_gitm_one_file(file_to_read, vars_to_read=-1):
     (Also include header information, as described above)
     """
 
-    print("-> Reading file : " + file_to_read)
-    print('   --> Vars : ', vars_to_read)
+    print('-> Reading file : ' + file_to_read, ' --> Vars : ', vars_to_read)
 
     data = {"version": 0, \
             "nLons": 0, \
