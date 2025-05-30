@@ -92,4 +92,53 @@ def calc_tec(allData3D):
     return slices
 
 
+#-----------------------------------------------------------------------------
+# This function takes either a low-pass filter or a high-pass filter
+# of the slices. It assumes that:
+#  allSlices = np.array of size (nTimes, nX, nY)
+#  iLow or iHigh is set to the number of times to average (centered on current time)
+#  if iLow is set, then it calculates a center-averaged valaue (low pass)
+#  if iHigh is set, then it subtracts the center-averaged value (high pass)
+#-----------------------------------------------------------------------------
+
+def filter_slices(allSlices, iLowPass = -1, iHighPass = -1):
+    
+    nTimes, nXs, nYs = np.shape(allSlices)
+    nAve = 0
+    if (iLowPass > 0):
+        nAve = iLowPass
+        doSubtract = False
+        print(' --> Low Pass Filtering the Slices!')
+    else:
+        nAve = iHighPass
+        doSubtract = True
+        print(' --> High Pass Filtering the Slices!')
+    if (nAve % 2 == 0):
+        print('high/low is set to even number, which is not great.')
+        print('Consider setting it to odd number!')
+    iHalf = int(nAve/2)
+    allSlicesAve = np.zeros((nTimes, nXs, nYs))
+    for iTime in range(nTimes):
+        iLow = iTime - iHalf
+        iHigh = iTime + iHalf + 1
+        if (iLow < 0):
+            iLow = 0
+        if (iHigh > nTimes):
+            iHigh = nTimes
+        nT = 0
+        sumSlice = np.zeros((nXs, nYs))
+        for iTimeSub in np.arange(iLow, iHigh):
+            sumSlice = sumSlice + allSlices[iTimeSub, :, :]
+            nT += 1
+        if (iLowPass > 0):
+            allSlicesAve[iTime, :, :] = sumSlice / nT
+        elif (iHighPass > 0):
+            if (nT == nAve):
+                allSlicesAve[iTime, :, :] = allSlices[iTime, :, :] - (sumSlice / nT)
+        else:
+            # no filter, just move the data!
+            allSlicesAve[iTime, :, :] = allSlices[iTime, :, :]
+            
+    return allSlicesAve
+    
 
