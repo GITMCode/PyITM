@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 
-from glob import glob
+import os
 from datetime import datetime
-from datetime import timedelta
 from struct import unpack
 import numpy as np
+from pyitm.fileio import util 
 
 #-----------------------------------------------------------------------------
 
-def read_gitm_header(file):
+def read_gitm_single_header(file):
     r""" Grab ancillary information from the GITM file
 
     Parameters
@@ -20,82 +20,41 @@ def read_gitm_header(file):
     header: A dictionary containing information about the netcdf file, such
             as nLons, nLons, nAlts, nVars, variable names, time(s)
 
+    Notes
+    -----
+    - This is a wrapper for read_gitm_headers that will read a single header file
+
     """
     
-    if (len(file) == 0):
-
-        filelist = sorted(glob('./3DALL*.bin'))
-
-        if (len(filelist) == 0):
-            print("No 3DALL files found. Checking for 1DALL.")
-            filelist = glob('./1DALL*.bin')
-            if (len(filelist) == 0):
-                print("No 1DALL files found. Stopping.")
-                exit()
-            file = filelist[0]
-
+    # check if file exists. If yes, just read. if not, attempt to parse
+    if os.path.exists(file):
+        filename = file
     else:
-        filelist = glob(file[0])
-        file = filelist[0]
-            
-    header = {"nFiles": len(filelist), \
-              "version": 0.1, \
-              "nLons": 0, \
-              "nLats": 0, \
-              "nAlts": 0, \
-              "nVars": 0, \
-              "vars": [], \
-              "time": [], \
-              "filename": [file] }
-
-    f=open(file, 'rb')
-
-    # This is all reading header stuff:
-
-    endChar='>'
-    rawRecLen=f.read(4)
-    recLen=(unpack(endChar+'l',rawRecLen))[0]
-    if (recLen>10000)or(recLen<0):
-        # Ridiculous record length implies wrong endian.
-        endChar='<'
-        recLen=(unpack(endChar+'l',rawRecLen))[0]
-
-    # Read version; read fortran footer+header.
-    header["version"] = unpack(endChar+'d',f.read(recLen))[0]
-
-    (oldLen, recLen)=unpack(endChar+'2l',f.read(8))
-
-    # Read grid size information.
-    (header["nLons"],header["nLats"],header["nAlts"]) = \
-        unpack(endChar+'lll',f.read(recLen))
-    (oldLen, recLen)=unpack(endChar+'2l',f.read(8))
-
-    # Read number of variables.
-    header["nVars"]=unpack(endChar+'l',f.read(recLen))[0]
-    (oldLen, recLen)=unpack(endChar+'2l',f.read(8))
-
-    # Collect variable names.
-    for i in range(header["nVars"]):
-        v = unpack(endChar+'%is'%(recLen),f.read(recLen))[0]
-        header["vars"].append(v.decode('utf-8').replace(" ",""))
-        (oldLen, recLen)=unpack(endChar+'2l',f.read(8))    
+        filename = util.any_to_filelist(file) # This is a list
         
-    # Extract time. 
-    (yy,mm,dd,hh,mn,ss,ms)=unpack(endChar+'lllllll',f.read(recLen))
-    header["time"].append(datetime(yy,mm,dd,hh,mn,ss,ms*1000))
+    if len(filename) > 1:
+        print("Received multiple headers! Only reading the first!!")
 
-    f.close()
+    header = read_gitm_headers(filename)
 
     return header
 
 #-----------------------------------------------------------------------------
 
-def read_gitm_headers(pre='./3DALL', files = ['']):
-    r""" Grab ancillary information from the GITM files
+
+def read_gitm_headers(input_files='./3DALL*.bin', verbose=False):
+    r""" Grab ancillary information from GITM output files
 
     Parameters
     ----------
-    None - does a glob to find files.
+    input_files: (str or list-like) - pattern to glob or list of files to read.
+        Default './3DALL*.bin', so only looks in `pwd`
+        - Examples: 
+            -> "/path/to/GITM/run/data/3DALL*.bin"
+            -> "/path/to/GITM/run/data/3DALL" 
+            -> ["/path/to/GITM/run/data/3DALL_t110926_000000.bin", 
+                "/path/to/GITM/run/data/3DALL_t110926_001000.bin", 
+                "/path/to/GITM/run/data/3DALL_t110926_002000.bin"]
 
     Returns
     -------
@@ -104,14 +63,14 @@ def read_gitm_headers(pre='./3DALL', files = ['']):
 
     """
 
-    if (len(files[0]) < 5):
-        filelist = sorted(glob(pre+'*.bin'))
-    else:
-        filelist = files
-    print("  -> Found ", len(filelist), "files")
+    filelist = util.any_to_filelist(input_files)
+    
+    # sanity check to make sure some files exist:
+    if verbose:
+        print("  -> Found ", len(filelist), "files")
     
     header = {"nFiles": len(filelist), \
-              "version": 0.1, \
+              "version": 0.1, #TODO
               "nLons": 0, \
               "nLats": 0, \
               "nAlts": 0, \
@@ -169,13 +128,14 @@ def read_gitm_headers(pre='./3DALL', files = ['']):
 #-----------------------------------------------------------------------------
 
 
-def read_gitm_one_file(file_to_read, vars_to_read=-1):
+def read_gitm_one_file(file_to_read, vars_to_read=[-1], verbose=True):
     r""" Read list of variables from one GITM file
 
     Parameters
     ----------
     file_to_read: GITM file to read
-    vars_to_read: list of variable NUMBERS to read
+    vars_to_read: list of variable NUMBERS to read. Use [-1] (default) for all variables.
+    verbosr: bool - print extra info when running? Default = True
 
     Returns
     -------
@@ -185,7 +145,13 @@ def read_gitm_one_file(file_to_read, vars_to_read=-1):
     (Also include header information, as described above)
     """
 
-    print('-> Reading file : ' + file_to_read, ' --> Vars : ', vars_to_read)
+    # Double check input arguments
+    if isinstance(vars_to_read, (str, int, float)):
+        raise TypeError("read_gitm_one_file must be called with a list of ints!\n"
+                        "Maybe try using the default value of [-1] instead.")
+
+    if verbose:
+        print('-> Reading file : ' + file_to_read, ' --> Vars : ', vars_to_read)
 
     data = {"version": 0, \
             "nLons": 0, \
@@ -222,7 +188,7 @@ def read_gitm_one_file(file_to_read, vars_to_read=-1):
     (oldLen, recLen)=unpack(endChar+'2l',f.read(8))
 
     if (vars_to_read[0] == -1):
-        vars_to_read = np.arange[nVars]
+        vars_to_read = np.arange(data['nVars'])
 
     # Collect variable names.
     for i in range(data["nVars"]):
@@ -258,15 +224,17 @@ def read_gitm_one_file(file_to_read, vars_to_read=-1):
 
     return data
 
-#-----------------------------------------------------------------------------
+# -----------------------------------------------------------------------------
 # This reads in a series of vars / files and returns the 3D information
 #-----------------------------------------------------------------------------
 
-def read_gitm_all_files(filelist, varlist):
+def read_gitm_all_files(filelist, varlist=[-1]):
+
+    filelist = util.any_to_filelist(filelist)
 
     # first read in spatial information:
     vars = [0, 1, 2]
-    spatialData = read_gitm_one_file(filelist[0], vars)
+    spatialData = read_gitm_one_file(filelist[0], vars, verbose=False)
 
     lons = np.degrees(spatialData[0])  # Convert from rad to deg
     nLons = len(lons[:, 0, 0])
@@ -276,11 +244,16 @@ def read_gitm_all_files(filelist, varlist):
     nAlts = len(alts[0, 0, :])
 
     nTimes = len(filelist)
-    nVars = len(varlist)
+    if varlist != [-1]:
+       nVars = len(varlist)
+    else: # varlist=[-1] means we read in all variables
+        nVars = read_gitm_headers(filelist[0], verbose=False)['nVars']
+
     if (nVars == 1):
         allData = np.zeros((nTimes, nLons, nLats, nAlts))
     else:
         allData = np.zeros((nTimes, nVars, nLons, nLats, nAlts))
+
     allTimes = []
     for iTime, filename in enumerate(filelist):
         data = read_gitm_one_file(filename, varlist)
