@@ -4,16 +4,17 @@ import os
 from datetime import datetime
 from struct import unpack
 import numpy as np
-from pyitm.fileio import util 
-
+from pyitm.fileio import util
+import xarray as xr
 #-----------------------------------------------------------------------------
 
-def read_gitm_single_header(file):
+def read_gitm_single_header(file, verbose=True):
     r""" Grab ancillary information from the GITM file
 
     Parameters
     ----------
-    file - name of the file to read and get header from
+    file - (str/path) name of the file to read and get header from
+    verbose - (bool) enable verbose outputs? True by default.
 
     Returns
     -------
@@ -64,7 +65,7 @@ def read_gitm_headers(input_files='./3DALL*.bin', verbose=False):
     """
 
     filelist = util.any_to_filelist(input_files)
-    
+
     # sanity check to make sure some files exist:
     if verbose:
         print("  -> Found ", len(filelist), "files")
