@@ -128,13 +128,13 @@ def read_gitm_headers(input_files='./3DALL*.bin', verbose=False):
 #-----------------------------------------------------------------------------
 
 
-def read_gitm_one_file(file_to_read, vars_to_read=[-1], verbose=True):
+def read_gitm_one_file(file_to_read, varlist=[-1], verbose=True):
     r""" Read list of variables from one GITM file
 
     Parameters
     ----------
     file_to_read: GITM file to read
-    vars_to_read: list of variable NUMBERS to read. Use [-1] (default) for all variables.
+    varlist: list of variable NUMBERS to read. Use [-1] (default) for all variables.
     verbosr: bool - print extra info when running? Default = True
 
     Returns
@@ -146,12 +146,15 @@ def read_gitm_one_file(file_to_read, vars_to_read=[-1], verbose=True):
     """
 
     # Double check input arguments
-    if isinstance(vars_to_read, (str, int, float)):
+    if isinstance(varlist, (str, int, float)):
         raise TypeError("read_gitm_one_file must be called with a list of ints!\n"
                         "Maybe try using the default value of [-1] instead.")
 
+    if '~' in file_to_read:
+        file_to_read = os.path.expanduser(file_to_read)
+
     if verbose:
-        print('-> Reading file : ' + file_to_read, ' --> Vars : ', vars_to_read)
+        print('-> Reading file : ' + file_to_read, ' --> Vars : ', varlist)
 
     data = {"version": 0, \
             "nLons": 0, \
@@ -161,66 +164,61 @@ def read_gitm_one_file(file_to_read, vars_to_read=[-1], verbose=True):
             "time": 0, \
             "vars": []}
 
-    f=open(file_to_read, 'rb')
-
-    # This is all reading header stuff:
-
-    endChar='>'
-    rawRecLen=f.read(4)
-    recLen=(unpack(endChar+'l',rawRecLen))[0]
-    if (recLen>10000)or(recLen<0):
-        # Ridiculous record length implies wrong endian.
-        endChar='<'
-        recLen=(unpack(endChar+'l',rawRecLen))[0]
-
-    # Read version; read fortran footer+data.
-    data["version"] = unpack(endChar+'d',f.read(recLen))[0]
-
-    (oldLen, recLen)=unpack(endChar+'2l',f.read(8))
-
-    # Read grid size information.
-    (data["nLons"],data["nLats"],data["nAlts"]) = \
-        unpack(endChar+'lll',f.read(recLen))
-    (oldLen, recLen)=unpack(endChar+'2l',f.read(8))
-
-    # Read number of variables.
-    data["nVars"]=unpack(endChar+'l',f.read(recLen))[0]
-    (oldLen, recLen)=unpack(endChar+'2l',f.read(8))
-
-    if (vars_to_read[0] == -1):
-        vars_to_read = np.arange(data['nVars'])
-
-    # Collect variable names.
-    for i in range(data["nVars"]):
-        v = unpack(endChar+'%is'%(recLen),f.read(recLen))[0]
-        data["vars"].append(v.decode('utf-8').replace(" ",""))
+    with open(file_to_read, 'rb') as f:
+    
+        # This is all reading header stuff:
+        endChar='>'
+        rawRecLen=f.read(4)
+        rec_len = (unpack(endChar + 'l', rawRecLen))[0]
+        if rec_len > 10000 or rec_len < 0:
+            # Ridiculous record length implies wrong endian.
+            endChar='<'
+            rec_len = (unpack(endChar + 'l', rawRecLen))[0]
+    
+        # Read version; read fortran footer+data.
+        data["version"] = unpack(endChar + 'd', f.read(rec_len))[0]
+    
         (oldLen, recLen)=unpack(endChar+'2l',f.read(8))
-
-    # Extract time. 
-    (yy,mm,dd,hh,mn,ss,ms)=unpack(endChar+'lllllll',f.read(recLen))
-    data["time"] = datetime(yy,mm,dd,hh,mn,ss,ms*1000)
-
-    # Header is this length:
-    # Version + start/stop byte
-    # nLons, nLats, nAlts + start/stop byte
-    # nVars + start/stop byte
-    # Variable Names + start/stop byte
-    # time + start/stop byte
-
-    iHeaderLength = 8 + 4+4 + 3*4 + 4+4 + 4 + 4+4 + \
-        data["nVars"]*40 + data["nVars"]*(4+4) + 7*4 + 4+4
-
-    nTotal = data["nLons"]*data["nLats"]*data["nAlts"]
-    iDataLength = nTotal*8 + 4+4
-
-    for iVar in vars_to_read:
-        f.seek(iHeaderLength+iVar*iDataLength)
-        s=unpack(endChar+'l',f.read(4))[0]
-        data[iVar] = np.array(unpack(endChar+'%id'%(nTotal),f.read(s)))
-        data[iVar] = data[iVar].reshape( 
-            (data["nLons"],data["nLats"],data["nAlts"]),order="F")
-
-    f.close()
+    
+        # Read grid size information.
+        (data["nLons"],data["nLats"],data["nAlts"]) = \
+            unpack(endChar+'lll',f.read(recLen))
+        (oldLen, recLen)=unpack(endChar+'2l',f.read(8))
+    
+        # Read number of variables.
+        data["nVars"]=unpack(endChar+'l',f.read(recLen))[0]
+        (oldLen, recLen)=unpack(endChar+'2l',f.read(8))
+    
+        if (varlist[0] == -1):
+            varlist = np.arange(data['nVars'])
+    
+        # Collect variable names.
+        for i in range(data["nVars"]):
+            v = unpack(endChar+'%is'%(recLen),f.read(recLen))[0]
+            data["vars"].append(v.decode('utf-8').replace(" ",""))
+            (oldLen, recLen)=unpack(endChar+'2l',f.read(8))
+    
+        # Extract time. 
+        (yy,mm,dd,hh,mn,ss,ms)=unpack(endChar+'lllllll',f.read(recLen))
+        data["time"] = datetime(yy,mm,dd,hh,mn,ss,ms*1000)
+    
+        # Header is this length:
+        # Version + start/stop byte
+        # nLons, nLats, nAlts + start/stop byte
+        # nVars + start/stop byte
+        # Variable Names + start/stop byte
+        # time + start/stop byte
+    
+        iHeaderLength = 84 + data["nVars"] * 48
+    
+        nTotal = data["nLons"]*data["nLats"]*data["nAlts"]
+        iDataLength = nTotal*8 + 4+4
+        for iVar in varlist:
+            f.seek(iHeaderLength+iVar*iDataLength)
+            s=unpack(endChar+'l',f.read(4))[0]
+            data[iVar] = np.array(unpack(endChar+'%id'%(nTotal),f.read(s)))
+            data[iVar] = data[iVar].reshape( 
+                (data["nLons"],data["nLats"],data["nAlts"]),order="F")
 
     return data
 
