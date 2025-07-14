@@ -31,11 +31,11 @@ def read_gitm_single_header(file):
         filename = file
     else:
         filename = util.any_to_filelist(file) # This is a list
-        
-    if len(filename) > 1:
-        print("Received multiple headers! Only reading the first!!")
+        if len(filename) > 1:
+            print("Received multiple headers! Only reading the first!!")
+        filename = filename[0]
 
-    header = read_gitm_headers(filename)
+    header = read_gitm_headers(filename, verbose=verbose)
 
     return header
 
@@ -228,7 +228,7 @@ def read_gitm_one_file(file_to_read, vars_to_read=[-1], verbose=True):
 # This reads in a series of vars / files and returns the 3D information
 #-----------------------------------------------------------------------------
 
-def read_gitm_all_files(filelist, varlist=[-1]):
+def read_gitm_all_files(filelist, varlist=[-1], verbose=False):
 
     filelist = util.any_to_filelist(filelist)
 
@@ -256,7 +256,7 @@ def read_gitm_all_files(filelist, varlist=[-1]):
 
     allTimes = []
     for iTime, filename in enumerate(filelist):
-        data = read_gitm_one_file(filename, varlist)
+        data = read_gitm_one_file(filename, varlist, verbose=verbose)
         allTimes.append(data["time"])
         if (nVars == 1):
             allData[iTime, :, :, :] = data[varlist[0]][:, :, :]
