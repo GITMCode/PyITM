@@ -232,6 +232,12 @@ def read_gitm_all_files(filelist, varlist=[-1], verbose=False):
 
     filelist = util.any_to_filelist(filelist)
 
+    # Get the prefixes for all entries in filelist;
+    prefixes = np.unique([file.split('/')[-1].split('_')[0] for file in filelist])
+    if len(prefixes) > 1: # make sure there is only one output type.
+        raise ValueError("Multiple output types cannot be read by this function."
+                        "\n\tProvided: " + str(prefixes))
+
     # first read in spatial information:
     vars = [0, 1, 2]
     spatialData = read_gitm_one_file(filelist[0], vars, verbose=False)
@@ -248,6 +254,7 @@ def read_gitm_all_files(filelist, varlist=[-1], verbose=False):
        nVars = len(varlist)
     else: # varlist=[-1] means we read in all variables
         nVars = read_gitm_headers(filelist[0], verbose=False)['nVars']
+        varlist = list(range(nVars))
 
     if (nVars == 1):
         allData = np.zeros((nTimes, nLons, nLats, nAlts))
