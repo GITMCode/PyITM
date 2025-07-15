@@ -163,7 +163,9 @@ def read_gitm_one_file(file_to_read, varlist=[-1], verbose=True):
             "nAlts": 0, \
             "nVars": 0, \
             "time": 0, \
-            "vars": []}
+            "vars": [],
+            "data": {},
+            }
 
     with open(file_to_read, 'rb') as f:
     
@@ -214,11 +216,12 @@ def read_gitm_one_file(file_to_read, varlist=[-1], verbose=True):
     
         nTotal = data["nLons"]*data["nLats"]*data["nAlts"]
         iDataLength = nTotal*8 + 4+4
+
         for iVar in varlist:
             f.seek(iHeaderLength+iVar*iDataLength)
             s=unpack(endChar+'l',f.read(4))[0]
-            data[iVar] = np.array(unpack(endChar+'%id'%(nTotal),f.read(s)))
-            data[iVar] = data[iVar].reshape( 
+            data["data"][iVar] = np.array(unpack(endChar+'%id'%(nTotal),f.read(s)))
+            data["data"][iVar] = data["data"][iVar].reshape( 
                 (data["nLons"],data["nLats"],data["nAlts"]),order="F")
 
     return data
@@ -239,7 +242,7 @@ def read_gitm_all_files(filelist, varlist=[-1], verbose=False):
 
     # first read in spatial information:
     vars = [0, 1, 2]
-    spatialData = read_gitm_one_file(filelist[0], vars, verbose=False)
+    spatialData = read_gitm_one_file(filelist[0], vars, verbose=False)["data"]
 
     lons = np.degrees(spatialData[0])  # Convert from rad to deg
     nLons = len(lons[:, 0, 0])
@@ -264,11 +267,8 @@ def read_gitm_all_files(filelist, varlist=[-1], verbose=False):
     for iTime, filename in enumerate(filelist):
         data = read_gitm_one_file(filename, varlist, verbose=verbose)
         allTimes.append(data["time"])
-        if (nVars == 1):
-            allData[iTime, :, :, :] = data[varlist[0]][:, :, :]
-        else:
-            for iVar, var in enumerate(varlist):
-                allData[iTime, iVar, :, :, :] = data[var][:, :, :]
+        for iVar, var in enumerate(varlist):
+            allData[iTime, iVar, :, :, :] = data["data"][var][:, :, :]
     vars = []
     for var in varlist:
         vars.append(data['vars'][var])
