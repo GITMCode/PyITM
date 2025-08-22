@@ -105,6 +105,21 @@ def read_all_files(filelist, varToPlot):
 # ----------------------------------------------------------------------------
 # ----------------------------------------------------------------------------
 
+def read_header(filelist):
+
+    filetype = determine_filetype(filelist[0])
+    if (filetype["myfile"] == filetype["iGitmBin"]):
+        header = gitmio.read_gitm_headers(filelist[0])
+    else:
+        print('File type not supported at this point!')
+
+    return header
+
+
+
+# ----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
+
 def any_to_filelist(input_data=None):
     """ 
     Take input_data and convert it to a list of file paths
