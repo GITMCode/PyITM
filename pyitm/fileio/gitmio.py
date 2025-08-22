@@ -5,6 +5,7 @@ from datetime import datetime
 from struct import unpack
 import numpy as np
 from pyitm.fileio import util
+from pyitm.fileio import variables
 
 #-----------------------------------------------------------------------------
 
@@ -77,6 +78,8 @@ def read_gitm_headers(input_files='./3DALL*.bin', verbose=False):
               "nAlts": 0, \
               "nVars": 0, \
               "vars": [], \
+              "shortname": [], \
+              "longname": [], \
               "time": [], \
               "filename": [] }
 
@@ -123,6 +126,9 @@ def read_gitm_headers(input_files='./3DALL*.bin', verbose=False):
 
         f.close()
 
+    header["shortname"] = variables.get_short_names(header["vars"])
+    header["longname"] = variables.get_long_names(header["vars"])
+
     return header
 
 
@@ -164,6 +170,8 @@ def read_gitm_one_file(file_to_read, varlist=[-1], verbose=True):
             "nVars": 0, \
             "time": 0, \
             "vars": [],
+            "shortname": [], \
+            "longname": [], \
             "data": {},
             }
 
@@ -224,6 +232,9 @@ def read_gitm_one_file(file_to_read, varlist=[-1], verbose=True):
             data["data"][iVar] = data["data"][iVar].reshape( 
                 (data["nLons"],data["nLats"],data["nAlts"]),order="F")
 
+    data["shortname"] = variables.get_short_names(data["vars"])
+    data["longname"] = variables.get_long_names(data["vars"])
+
     return data
 
 # -----------------------------------------------------------------------------
@@ -268,7 +279,11 @@ def read_gitm_all_files(filelist, varlist=[-1], verbose=False):
         data = read_gitm_one_file(filename, varlist, verbose=verbose)
         allTimes.append(data["time"])
         for iVar, var in enumerate(varlist):
-            allData[iTime, iVar, :, :, :] = data["data"][var][:, :, :]
+            if (nVars == 1):
+                allData[iTime, :, :, :] = data["data"][var][:, :, :]
+            else:
+                allData[iTime, iVar, :, :, :] = data["data"][var][:, :, :]
+
     vars = []
     for var in varlist:
         vars.append(data['vars'][var])
@@ -276,6 +291,8 @@ def read_gitm_all_files(filelist, varlist=[-1], verbose=False):
     data = {'times': allTimes,
             'data': allData,
             'vars': vars,
+            'shortname': variables.get_short_names(vars), \
+            'longname': variables.get_long_names(vars), \
             'lons': lons,
             'lats': lats,
             'alts': alts,
