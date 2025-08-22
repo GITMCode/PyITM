@@ -90,6 +90,11 @@ def data_slice(allData3D, iLon = -1, iLat = -1, iAlt = -1):
 
     nTimes = allData3D['nTimes']
     nVars = allData3D['nVars']
+    nLons = allData3D['nLons']
+    nLats = allData3D['nLats']
+    nAlts = allData3D['nAlts']
+
+    if (nVars > 1):
         if (iAlt > -1):
             slices = np.zeros((nTimes, nVars, nLons, nLats))
             slices[:, :, :, :] = allData3D['data'][:, :, :, :, iAlt]
