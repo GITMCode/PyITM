@@ -11,7 +11,7 @@ import argparse
 import sys
 sys.path.insert(0,'/home/ridley/Software/PyITM/')
 
-from pyitm.fileio import gitmio
+from pyitm.fileio import util
 from pyitm.modeldata import utils
 from pyitm.plotting import plotutils
 from pyitm.plotting import plotters
@@ -26,9 +26,9 @@ def get_args():
                         help = 'altitude :  alt in km (closest)') 
 
     # variable to plot as a number
-    parser.add_argument('-ivar',  \
-                        default = 3, type = int, \
-                        help = 'variable to plot (number)')
+    parser.add_argument('-var',  \
+                        default = '3', \
+                        help = 'variable to plot (number or variable name)')
 
     # User can set max and min of the colorbar:
     parser.add_argument('-mini',  default = 1e32, type = float, \
@@ -60,9 +60,9 @@ if __name__ == '__main__':
     # Get the input arguments
     args = get_args()
     filelist = args.filelist
-    varToPlot = [args.ivar]
+    varToPlot = args.var
 
-    allData = gitmio.read_gitm_all_files(filelist, varToPlot)
+    allData = util.read_all_files(filelist, varToPlot)
 
     altGoal = args.alt
     alts1d = allData['alts'][0, 0, :]
@@ -76,8 +76,8 @@ if __name__ == '__main__':
     latsEdge = utils.move_centers_to_edges(lats1d)
 
     allSlices = utils.data_slice(allData, iAlt = iAlt)
-    varName = allData['vars'][0]
-    sVarNum = 'var%03d_' % args.ivar
+    varName = allData['longname'][0]
+    sVarNum = allData['shortname'][0] + '_'
     sAltNum = 'alt%04d_' % int(realAlt)
 
     allTimes = allData['times']
