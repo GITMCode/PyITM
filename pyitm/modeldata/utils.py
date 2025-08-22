@@ -2,6 +2,82 @@
 
 import numpy as np
 
+#-----------------------------------------------------------------------------
+# find which cut direction to make, then extract a bunch of information
+# based on that decision.
+#-----------------------------------------------------------------------------
+
+def find_cut(args, allData):
+
+    cutValue = -1e32
+    cutString = ''
+    cutShort = ''
+    iLon = -1
+    iLat = -1
+    iAlt = -1
+    xLabel = ''
+    yLabel = ''
+    lons1d = allData['lons'][:, 0, 0]
+    lats1d = allData['lats'][0, :, 0]
+    alts1d = allData['alts'][0, 0, :]
+    xRange = [0,0]
+    yRange = [0,0]
+
+    if (args.cut == 'alt'):
+        altGoal = float(args.alt)
+        diff = np.abs(alts1d - altGoal)
+        iAlt = np.argmin(diff)
+        cutValue = alts1d[iAlt]
+        cutString = 'Alt : %d km' % int(cutValue)
+        cutShort = 'alt%04d_' % iAlt
+        xLabel = 'Longitude (deg)'
+        yLabel = 'Latitude (deg)'
+        xPos1d = lons1d
+        yPos1d = lats1d
+        xRange = [0, 360]
+        yRange = [-90.0, 90.0]
+    if (args.cut == 'lon'):
+        lonGoal = float(args.lon)
+        diff = np.abs(lons1d - lonGoal)
+        iLon = np.argmin(diff)
+        cutValue = lons1d[iLon]
+        cutString = 'Lon : %d deg' % int(cutValue)
+        cutShort = 'lon%04d_' % iLon
+        xLabel = 'Latitude (deg)'
+        yLabel = 'Altitude (km)'
+        xPos1d = lats1d
+        yPos1d = alts1d
+        xRange = [-90.0, 90.0]
+        yRange = [alts1d[2], alts1d[-3]]
+    if (args.cut == 'lat'):
+        latGoal = float(args.lat)
+        diff = np.abs(lats1d - latGoal)
+        iLat = np.argmin(diff)
+        cutValue = lats1d[iLat]
+        cutString = 'Lat : %d deg' % int(cutValue)
+        cutShort = 'lat%04d_' % iLat
+        xLabel = 'Longitude (deg)'
+        yLabel = 'Altitude (km)'
+        xPos1d = lons1d
+        yPos1d = alts1d
+        xRange = [0.0, 360.0]
+        yRange = [alts1d[2], alts1d[-3]]
+
+    cut = {'iLon': iLon,
+           'iLat': iLat,
+           'iAlt': iAlt,
+           'cutValue': cutValue,
+           'cutString': cutString,
+           'cutShort': cutShort,
+           'xLabel': xLabel,
+           'yLabel': yLabel,
+           'xRange': xRange,
+           'yRange': yRange,
+           'xPos': xPos1d,
+           'yPos': yPos1d}
+
+    return cut
+
 # ----------------------------------------------------------------------------
 # take a dictionary containing all of the model data and
 # return slices. The data should have the shape:
@@ -14,11 +90,6 @@ def data_slice(allData3D, iLon = -1, iLat = -1, iAlt = -1):
 
     nTimes = allData3D['nTimes']
     nVars = allData3D['nVars']
-    nLons = allData3D['nLons']
-    nLats = allData3D['nLats']
-    nAlts = allData3D['nAlts']
-
-    if (nVars > 1):
         if (iAlt > -1):
             slices = np.zeros((nTimes, nVars, nLons, nLats))
             slices[:, :, :, :] = allData3D['data'][:, :, :, :, iAlt]
