@@ -11,7 +11,7 @@ import argparse
 import sys
 sys.path.insert(0,'/home/ridley/Software/PyITM/')
 
-from pyitm.fileio import gitmio
+from pyitm.fileio import gitmio, util
 from pyitm.modeldata import utils
 from pyitm.plotting import plotutils
 
@@ -25,8 +25,8 @@ def get_args():
                         help = 'longitude in deg (closest, -1 for zonal average)') 
 
     # variable to plot as a number
-    parser.add_argument('-ivar',  \
-                        default = 3, type = int, \
+    parser.add_argument('-var',  \
+                        default = '3', \
                         help = 'variable to plot (number)')
 
     # User can set max and min of the colorbar:
@@ -59,9 +59,9 @@ if __name__ == '__main__':
     # Get the input arguments
     args = get_args()
     filelist = args.filelist
-    varToPlot = [args.ivar]
+    varToPlot = args.var
 
-    allData = gitmio.read_gitm_all_files(filelist, varToPlot)
+    allData = util.read_all_files(filelist, varToPlot)
 
     if (args.lon >= 0):
         lonGoal = args.lon
@@ -79,8 +79,9 @@ if __name__ == '__main__':
     latsEdge = utils.move_centers_to_edges(lats1d)
 
     allSlices = utils.data_slice(allData, iLon = iLon)
-    sVarNum = 'var%03d_' % args.ivar
-    varName = allData['vars'][0]
+    varName = allData['longname'][0]
+    sVarNum = allData['shortname'][0] + '_'
+    
     if (args.lon < 0):
         sLonNum = 'lonZave'
     else:
