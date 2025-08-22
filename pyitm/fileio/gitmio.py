@@ -5,7 +5,7 @@ from datetime import datetime
 from struct import unpack
 import numpy as np
 from pyitm.fileio import util
-import xarray as xr
+
 #-----------------------------------------------------------------------------
 
 def read_gitm_single_header(file, verbose=True):
