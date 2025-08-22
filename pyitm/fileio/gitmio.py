@@ -459,7 +459,7 @@ def gitm_extract_data(locations, times, variables, dir = './'):
 
             outdata[iVar].append((1.0-r) * dataLeft0 + r * dataRight0)
             if (iVar < 2):
-                outdata[iVar][-1] = outdata[iVar][-1] * rtod
+                outdata[iVar][-1] = outdata[iVar][-1] * 180.0 / np.pi
             if (iVar == 2):
                 outdata[iVar][-1] = outdata[iVar][-1] / 1000.0
 
