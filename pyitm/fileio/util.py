@@ -1,10 +1,109 @@
 #!/usr/bin/env python3
 
+import re
+
+from pyitm.fileio import gitmio
+import numpy as np
+
+# ----------------------------------------------------------------------------
 # Helpful functions for the io modules
+# ----------------------------------------------------------------------------
 
 def notfound(err):
     print(err)
     raise FileNotFoundError
+
+# ----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
+
+def determine_filetype(filename):
+    """
+    Determine the filetype for a given file. 
+    There are currently only two supported types:
+        - gitm binary files
+        - aether netcdf files
+    """
+    fType = {
+        "iGitmBin": 0,
+        "iGitmNetcdf": 1,
+        "iAetherNetcdf": 2,
+        "myfile": -1
+    } 
+    m = re.match(r'(.*)bin', filename)
+    if m:
+        fType["myfile"] = fType["iGitmBin"]
+    else:
+        fType["myfile"] = fType["iAetherNetcdf"]
+    return fType
+
+# ----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
+
+def find_string(item, stringList):
+    iVal = -1
+    if (item in stringList):
+        i = 0
+        while (i < len(stringList)):
+            if (stringList[i] == item):
+                iVal = i
+                i = len(stringList)
+            i += 1
+    return iVal
+
+# ----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
+
+def convert_var_to_number(varList, header = None):
+
+    if (np.isscalar(varList)):
+        if (varList.isnumeric()):
+            iVars = [int(varList)]
+        else:
+            if (header == None):
+                print('Non number variables are not supported yet!')
+                iVars = [3]
+            else:
+                iV = find_string(varList, header['shortname'])
+                if (iV < 0):
+                    iV = find_string(varList, header['vars'])
+                if (iV < 0):
+                    iV = find_string(varList, header['longname'])
+                iVars = [iV]
+    else:
+        iVars = []
+        for var in varList:
+            if (var.isnumeric()):
+                iVars.append(int(var))
+            else:
+                if (header == None):
+                    print('Non number variables are not supported yet!')
+                    iVars = [3]
+                else:
+                    iV = find_string(varList, header['shortname'])
+                    if (iV < 0):
+                        iV = find_string(varList, header['vars'])
+                    if (iV < 0):
+                        iV = find_string(varList, header['longname'])
+                    iVars.append(iV)
+
+    return iVars
+
+# ----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
+
+def read_all_files(filelist, varToPlot):
+
+    filetype = determine_filetype(filelist[0])
+    if (filetype["myfile"] == filetype["iGitmBin"]):
+        header = gitmio.read_gitm_headers(filelist[0])
+        varToPlot = convert_var_to_number(varToPlot, header)
+
+    print('vartoplot : ', varToPlot)
+    allData = gitmio.read_gitm_all_files(filelist, varToPlot)
+    return allData
+
+# ----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
 
 def any_to_filelist(input_data=None):
     """ 
