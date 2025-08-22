@@ -14,6 +14,7 @@ sys.path.insert(0,'/home/ridley/Software/PyITM/')
 from pyitm.fileio import gitmio
 from pyitm.modeldata import utils
 from pyitm.plotting import plotutils
+from pyitm.plotting import plotters
 
 def get_args():
 
@@ -28,10 +29,6 @@ def get_args():
     parser.add_argument('-ivar',  \
                         default = 3, type = int, \
                         help = 'variable to plot (number)')
-
-    parser.add_argument('-tec',  default = False, \
-                        action='store_true',
-                        help = 'plot total electron content (TEC)')
 
     # User can set max and min of the colorbar:
     parser.add_argument('-mini',  default = 1e32, type = float, \
@@ -63,38 +60,25 @@ if __name__ == '__main__':
     # Get the input arguments
     args = get_args()
     filelist = args.filelist
-    if (args.tec):
-        varToPlot = [34]
-    else:
-        varToPlot = [args.ivar]
+    varToPlot = [args.ivar]
 
     allData = gitmio.read_gitm_all_files(filelist, varToPlot)
 
-    if (not args.tec):
-        altGoal = args.alt
-        alts1d = allData['alts'][0, 0, :]
-        diff = np.abs(alts1d - altGoal)
-        iAlt = np.argmin(diff)
-        realAlt = alts1d[iAlt]
-    else:
-        realAlt = -1.0
-        iAlt = 0
+    altGoal = args.alt
+    alts1d = allData['alts'][0, 0, :]
+    diff = np.abs(alts1d - altGoal)
+    iAlt = np.argmin(diff)
+    realAlt = alts1d[iAlt]
 
     lons1d = allData['lons'][:, 0, iAlt]
     lats1d = allData['lats'][0, :, iAlt]
     lonsEdge = utils.move_centers_to_edges(lons1d)
     latsEdge = utils.move_centers_to_edges(lats1d)
 
-    if (args.tec):
-        allSlices = utils.calc_tec(allData)
-        varName = 'TEC'
-        sVarNum = 'varTEC_'
-        sAltNum = ''
-    else:
-        allSlices = utils.data_slice(allData, iAlt = iAlt)
-        varName = allData['vars'][0]
-        sVarNum = 'var%03d_' % args.ivar
-        sAltNum = 'alt%04d_' % int(realAlt)
+    allSlices = utils.data_slice(allData, iAlt = iAlt)
+    varName = allData['vars'][0]
+    sVarNum = 'var%03d_' % args.ivar
+    sAltNum = 'alt%04d_' % int(realAlt)
 
     allTimes = allData['times']
 
@@ -104,31 +88,17 @@ if __name__ == '__main__':
                      color = 'red', \
                      minVal = 1e32, maxVal = -1e32)
 
-    dpi = 120
-
-    for iTime, uTime in enumerate(allTimes):
-
-        fig = plt.figure(figsize=(10, 5.5), dpi = dpi)
-        ax = fig.add_axes([0.07, 0.06, 0.97, 0.9])
-
-        title = uTime.strftime("%d %b %Y %H:%M:%S UT")
-        if (not args.tec):
-            title = title + '; Alt: %.0f km' % realAlt
-        value2d = allSlices[iTime, :, :].transpose()
-        con = ax.pcolormesh(lonsEdge, latsEdge, value2d, \
-                            cmap = dataMinMax['cmap'], \
-                            vmin = dataMinMax['mini'], \
-                            vmax = dataMinMax['maxi'])
-        ax.set_ylim(args.latmin, args.latmax)
-        ax.set_xlim(args.lonmin, args.lonmax)
-        ax.set_aspect(1.0)
-        ax.set_title(title)
-
-        cbar = fig.colorbar(con, ax = ax, shrink = 0.75, pad = 0.02)
-        cbar.set_label(varName, rotation=90)
-
-        sTimeOut = uTime.strftime('%y%m%d_%H%M%S')
-        outFile = sVarNum + sAltNum + sTimeOut + '.png'
-        print(" ==> Writing file : ", outFile)
-        fig.savefig(outFile, dpi = dpi)
-        plt.close(fig)
+    sFilePre = sVarNum + sAltNum
+    sTitleAdd = '; Alt: %.0f km' % realAlt
+    plotters.plot_series_of_slices(allSlices,
+                                   allTimes,
+                                   lonsEdge,
+                                   latsEdge,
+                                   dataMinMax,
+                                   xLabel = 'Longitude (deg)',
+                                   yLabel = 'Latitude (deg)',
+                                   varName = varName,
+                                   titleAddOn = sTitleAdd,
+                                   filenamePrefix = sFilePre,
+                                   xLimits = [args.lonmin, args.lonmax],
+                                   yLimits = [args.latmin, args.latmax])   
