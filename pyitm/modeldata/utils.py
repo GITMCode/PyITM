@@ -27,7 +27,12 @@ def data_slice(allData3D, iLon = -1, iLat = -1, iAlt = -1):
             slices[:, :, :, :] = allData3D['data'][:, :, :, iLat, :]
         else:
             slices = np.zeros((nTimes, nVars, nLats, nAlts))
-            slices[:, :, :, :] = allData3D['data'][:, :, iLon, :, :]
+            if (iLon > 0):
+                slices[:, :, :, :] = allData3D['data'][:, :, iLon, :, :]
+            else:
+                for iL in range(nLons-4):
+                    slices[:, :, :, :] = slices[:, :, :, :] + allData3D['data'][:, :, iLon, :, :]
+                slices[:, :, :, :] = slices[:, :, :, :] / (nLons-4)
     else:
         if (iAlt > -1):
             slices = np.zeros((nTimes, nLons, nLats))
@@ -37,7 +42,13 @@ def data_slice(allData3D, iLon = -1, iLat = -1, iAlt = -1):
             slices[:, :, :] = allData3D['data'][:, :, iLat, :]
         else:
             slices = np.zeros((nTimes, nLats, nAlts))
-            slices[:, :, :] = allData3D['data'][:, iLon, :, :]
+            if (iLon > 0):
+                slices[:, :, :] = allData3D['data'][:, iLon, :, :]
+            else:
+                for iL in range(nLons-4):
+                    print('ilon : ', iL)
+                    slices[:, :, :] = slices[:, :, :] + allData3D['data'][:, iLon + 2, :, :]
+                slices = slices / (nLons-4)
 
     return slices
 
