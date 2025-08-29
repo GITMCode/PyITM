@@ -45,6 +45,10 @@ def get_args():
     parser.add_argument('-lonmax',  default = 360, type = float, \
                         help = 'manually set the maxiumum latitude for the plots')
 
+    parser.add_argument('-list',  \
+                        action='store_true', default = False, \
+                        help = 'list variables in file')
+    
     # Get the files to plot:
     parser.add_argument('filelist', nargs='+', \
                         help = 'list files to use for generating plots')
@@ -62,8 +66,16 @@ if __name__ == '__main__':
     filelist = args.filelist
     varToPlot = args.var
 
+    if (args.list):
+        util.list_file_info(filelist)
+        exit()
+    
     allData = util.read_all_files(filelist, varToPlot)
 
+    if (not allData):
+        util.list_file_info(filelist)
+        exit()
+            
     altGoal = args.alt
     alts1d = allData['alts'][0, 0, :]
     diff = np.abs(alts1d - altGoal)
