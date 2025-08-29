@@ -96,7 +96,8 @@ def read_netcdf_one_file(filename, file_vars = None, verbose = False):
             var = ncfile.variables[key]  # key is var name
             data[key] = DataArray(np.array(var), var.__dict__)
 
-        data['time'] = tc.epoch_to_datetime(np.array(ncfile.variables['time'])[0])
+        data['time'] = \
+            tc.epoch_to_datetime(np.array(ncfile.variables['time'])[0])
 
         try:
             data['isEnsemble'] = True if ncfile.isEnsemble == "True" else False
@@ -179,12 +180,14 @@ def read_netcdf_one_header(filename):
             else:
                 data['units'].append('')
             if hasattr(ncfile.variables[key], 'long_name'):
-                data['longname'].append(getattr(ncfile.variables[key], 'long_name'))
+                data['longname'].append(getattr(ncfile.variables[key],
+                                                'long_name'))
             else:
                 data['longname'].append(key)
             data['vars'].append(key)
 
-        data['time'] = tc.epoch_to_datetime(np.array(ncfile.variables['time'])[0])
+        data['time'] = \
+            tc.epoch_to_datetime(np.array(ncfile.variables['time'])[0])
 
         try:
             data['isEnsemble'] = True if ncfile.isEnsemble == "True" else False
@@ -208,21 +211,15 @@ def read_netcdf_all_files(filelist, varlist=[-1], verbose=False):
     filelist = util.any_to_filelist(filelist)
 
     # Get the prefixes for all entries in filelist;
-    prefixes = np.unique([file.split('/')[-1].split('_')[0] for file in filelist])
+    prefixes = np.unique([file.split('/')[-1].split('_')[0] \
+                          for file in filelist])
     if len(prefixes) > 1: # make sure there is only one output type.
-        raise ValueError("Multiple output types cannot be read by this function."
-                        "\n\tProvided: " + str(prefixes))
+        raise ValueError("Multiple output types cannot be read by this " +
+                         "function.\n\tProvided: " + str(prefixes))
 
     # first read in spatial information:
     vars = ['lon', 'lat', 'z']
     spatialData = read_netcdf_one_file(filelist[0], vars, verbose=False)
-
-    lons = spatialData['lon']  
-    nLons = len(lons[:, 0, 0])
-    lats = spatialData['lat']
-    nLats = len(lats[0, :, 0])
-    alts = spatialData['z'] / 1000.0  # Convert from m to km
-    nAlts = len(alts[0, 0, :])
 
     nTimes = len(filelist)
     if varlist != [-1]:
@@ -232,21 +229,55 @@ def read_netcdf_all_files(filelist, varlist=[-1], verbose=False):
         varlist = header['vars']
         nVars = len(varlist)
 
-    if (nVars == 1):
-        allData = np.zeros((nTimes, nLons, nLats, nAlts))
-    else:
-        allData = np.zeros((nTimes, nVars, nLons, nLats, nAlts))
-
     allTimes = []
+    if (spatialData['nblocks'] == 0):
+    
+        lons = spatialData['lon']  
+        nLons = len(lons[:, 0, 0])
+        lats = spatialData['lat']
+        nLats = len(lats[0, :, 0])
+        alts = spatialData['z'] / 1000.0  # Convert from m to km
+        nAlts = len(alts[0, 0, :])
+        nBlocks = 0
+        
+        if (nVars == 1):
+            allData = np.zeros((nTimes, nLons, nLats, nAlts))
+        else:
+            allData = np.zeros((nTimes, nVars, nLons, nLats, nAlts))
+
+    else:
+            
+        # we will now have a block dimension, and the latitude and
+        # longitude could be dependent on block, lon, and lat:
+        lons = spatialData['lon']
+        nLons = len(lons[0, :, 0, 0])
+        lats = spatialData['lat']
+        nLats = len(lats[0, 0, :, 0])
+        alts = spatialData['z'] / 1000.0  # Convert from m to km
+        nAlts = len(alts[0, 0, 0, :])
+        nBlocks = len(lons[:, 0, 0, 0])
+        print('block file! ', nBlocks)
+        
+        if (nVars == 1):
+            allData = np.zeros((nTimes, nBlocks, nLons, nLats, nAlts))
+        else:
+            allData = np.zeros((nTimes, nVars, nBlock, nLons, nLats, nAlts))
+
     for iTime, filename in enumerate(filelist):
         data = read_netcdf_one_file(filename, varlist, verbose=verbose)
         allTimes.append(data["time"])
         for iVar, var in enumerate(varlist):
-            if (nVars == 1):
-                allData[iTime, :, :, :] = data[var][:, :, :]
+            if (nBlocks == 0):
+                if (nVars == 1):
+                    allData[iTime, :, :, :] = data[var][:, :, :]
+                else:
+                    allData[iTime, iVar, :, :, :] = data[var][:, :, :]
             else:
-                allData[iTime, iVar, :, :, :] = data[var][:, :, :]
-
+                if (nVars == 1):
+                    allData[iTime, :, :, :, :] = data[var][:, :, :, :]
+                else:
+                    allData[iTime, iVar, :, :, :, :] = data[var][:, :, :, :]
+                
     vars = []
     for var in varlist:
         vars.append(var)
@@ -259,11 +290,12 @@ def read_netcdf_all_files(filelist, varlist=[-1], verbose=False):
             'lons': lons,
             'lats': lats,
             'alts': alts,
-            'nTimes': nTimes,
-            'nVars': nVars,
-            'nLons' : nLons,
-            'nLats': nLats,
-            'nAlts': nAlts}
+            'ntimes': nTimes,
+            'nvars': nVars,
+            'nblocks' : nBlocks,
+            'nlons' : nLons,
+            'nlats': nLats,
+            'nalts': nAlts}
     
     return data
 
