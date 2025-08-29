@@ -1,5 +1,120 @@
 #!/usr/bin/env python3
 
+import numpy as np
+
+# ----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
+
+def find_string(item, stringList):
+    iVal = -1
+    if (item in stringList):
+        i = 0
+        while (i < len(stringList)):
+            if (stringList[i] == item):
+                iVal = i
+                i = len(stringList)
+            i += 1
+    return iVal
+
+# ----------------------------------------------------------------------------
+# Take variable numbers or names and make sure that they are all names
+# coming out.  Is the user enters a name, it will just use the name.  If the
+# user enters a number, this function will take the Nth variable in the
+# list of variables returned from the header.
+# ----------------------------------------------------------------------------
+
+def convert_number_to_var(varList, header = None):
+
+    if (np.isscalar(varList)):
+        if (varList.isnumeric()):
+            if (header):
+                sVars = [header['vars'][int(varList)]]
+        else:
+            sVars = [varList]
+
+    else:
+        sVars = []
+        for var in varList:
+            if (var.isnumeric()):
+                if (header):
+                    sVars.append(header['vars'][int(var)])
+            else:
+                sVars.append(var)
+            
+    return sVars
+    
+# ----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
+
+def convert_var_to_number(varList, header = None):
+
+    if (np.isscalar(varList)):
+        if (varList.isnumeric()):
+            iVars = [int(varList)]
+        else:
+            if (header == None):
+                print('Non number variables are not supported yet!')
+                iVars = [3]
+            else:
+                sVar = match_var_name([varList], header)[0]
+                print('sVar -> ', sVar)
+                iV = find_string(sVar, header['shortname'])
+                if (iV < 0):
+                    iV = find_string(sVar, header['vars'])
+                if (iV < 0):
+                    iV = find_string(sVar, header['longname'])
+                iVars = [iV]
+    else:
+        iVars = []
+        for var in varList:
+            if (var.isnumeric()):
+                iVars.append(int(var))
+            else:
+                if (header == None):
+                    print('Non number variables are not supported yet!')
+                    iVars = [3]
+                else:
+                    sVar = match_var_name([var], header)[0]
+                    iV = find_string(sVar, header['shortname'])
+                    if (iV < 0):
+                        iV = find_string(sVar, header['vars'])
+                    if (iV < 0):
+                        iV = find_string(sVar, header['longname'])
+                    iVars.append(iV)
+
+    return iVars
+
+#-----------------------------------------------------------------------------
+# remap gitm variables
+#-----------------------------------------------------------------------------
+
+def match_var_name(varsIn, header):
+
+    varsOut = []
+
+    for varIn in varsIn:
+        isFound = False
+        for var in header['vars']:
+            if (var.lower() == varIn.lower()):
+                varsOut.append(var)
+                isFound = True
+        if (not isFound):
+            for iVar, var in enumerate(header['longname']):
+                if (var.lower() == varIn.lower()):
+                    varsOut.append(header['vars'][iVar])
+                    isFound = True
+        if (not isFound):
+            for iVar, var in enumerate(header['shortname']):
+                if (var.lower() == varIn.lower()):
+                    varsOut.append(header['vars'][iVar])
+                    isFound = True
+        if (not isFound):
+            varsOut.append('NotFound')
+            print('Could not find variable : ', varIn)
+            print('  -> Should be able to list variables by putting -list')
+
+    return varsOut
+
 #-----------------------------------------------------------------------------
 # remap gitm variables
 #-----------------------------------------------------------------------------
@@ -60,6 +175,9 @@ def remap_variable_names(varsIn):
 
 def get_short_names(varsIn):
 
+    if (np.isscalar(varsIn)):
+        varsIn = [varsIn]
+    
     mapVars = {
         'Rho' : 'rho',
         '[O(3P)]': 'O',
@@ -73,10 +191,27 @@ def get_short_names(varsIn):
         '[H]': 'H',
         '[CO2]': 'CO2',
         '[O(1D)]': 'O_1D',
+        'density_O': 'O',
+        'density_O_3P': 'O',
+        'density_O2': 'O2',
+        'density_N2': 'N2',
+        'density_N': 'N',
+        'density_N_4S': 'N',
+        'density_NO': 'NO',
+        'density_He': 'He',
+        'density_N_2D': 'N_2D',
+        'density_N_2P': 'N_2P',
+        'density_H]': 'H',
+        'density_CO2': 'CO2',
+        'density_O_1D': 'O_1D',
         'Temperature': 'Tn',
+        'temperature_neutral': 'Tn',
         'Vn(east)': 'Ve',
         'Vn(north)': 'Vn',
         'Vn(up)': 'Vv',
+        'velocity_east_neutral': 'Ve',
+        'velocity_north_neutral': 'Vn',
+        'velocity_up_neutral': 'Vv',
         'Vn(up,O(3P))': 'Vv_O',
         'Vn(up,O2)': 'Vv_O2',
         'Vn(up,N2)': 'Vv_N2',
@@ -93,8 +228,23 @@ def get_short_names(varsIn):
         '[H+]': 'H+',
         '[He+]': 'He+',
         '[e-]': 'e-',
+        'density_NO+': 'NO+',
+        'density_O+': 'O+',
+        'density_O2+': 'O2+',
+        'density_N2+': 'N2+',
+        'density_N+': 'N+',
+        'density_O+_2D': 'O_2D+',
+        'density_O+_2P': 'O_2P+',
+        'density_H+': 'H+',
+        'density_He+': 'He+',
+        'density_e-': 'e-',
         'eTemperature': 'Te',
         'iTemperature': 'Ti',
+        'temperature_ion': 'Ti',
+        'temperature_electron': 'Te',
+        'velocity_east_ion': 'Vie',
+        'velocity_north_ion': 'Vin',
+        'velocity_up_ion': 'Viv',
         'Vi(east)': 'Vie',
         'Vi(north)': 'Vin',
         'Vi(up)': 'Viv'}
@@ -102,9 +252,15 @@ def get_short_names(varsIn):
     varsOut = []
 
     for var in varsIn:
+        isFound = False
         if (var in mapVars):
             varsOut.append(mapVars[var])
-        else:
+            isFound = True
+        if (not isFound):
+            if (var.lower() in mapVars):
+                varsOut.append(mapVars[var.lower()])
+                isFound = True
+        if (not isFound):
             varsOut.append(var)
     return varsOut
 
