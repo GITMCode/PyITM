@@ -88,16 +88,24 @@ def find_cut(args, allData):
 
 def data_slice(allData3D, iLon = -1, iLat = -1, iAlt = -1):
 
-    nTimes = allData3D['nTimes']
-    nVars = allData3D['nVars']
-    nLons = allData3D['nLons']
-    nLats = allData3D['nLats']
-    nAlts = allData3D['nAlts']
+    nTimes = allData3D['ntimes']
+    nVars = allData3D['nvars']
+    nLons = allData3D['nlons']
+    nLats = allData3D['nlats']
+    nAlts = allData3D['nalts']
+    nBlocks = allData3D['nblocks']
 
+    if ((nBlocks > 0) and (iAlt < 0)):
+        print('data_slice with multiple blocks on works with a alt slice!')
+    
     if (nVars > 1):
         if (iAlt > -1):
-            slices = np.zeros((nTimes, nVars, nLons, nLats))
-            slices[:, :, :, :] = allData3D['data'][:, :, :, :, iAlt]
+            if (nBlocks == 0):
+                slices = np.zeros((nTimes, nVars, nLons, nLats))
+                slices[:, :, :, :] = allData3D['data'][:, :, :, :, iAlt]
+            else:
+                slices = np.zeros((nTimes, nVars, nBlocks, nLons, nLats))
+                slices[:, :, :, :, : ] = allData3D['data'][:, :, :, :, :, iAlt]
         elif (iLat > -1):
             slices = np.zeros((nTimes, nVars, nLons, nAlts))
             slices[:, :, :, :] = allData3D['data'][:, :, :, iLat, :]
@@ -107,12 +115,17 @@ def data_slice(allData3D, iLon = -1, iLat = -1, iAlt = -1):
                 slices[:, :, :, :] = allData3D['data'][:, :, iLon, :, :]
             else:
                 for iL in range(nLons-4):
-                    slices[:, :, :, :] = slices[:, :, :, :] + allData3D['data'][:, :, iLon, :, :]
+                    slices[:, :, :, :] = slices[:, :, :, :] + \
+                        allData3D['data'][:, :, iLon, :, :]
                 slices[:, :, :, :] = slices[:, :, :, :] / (nLons-4)
     else:
         if (iAlt > -1):
-            slices = np.zeros((nTimes, nLons, nLats))
-            slices[:, :, :] = allData3D['data'][:, :, :, iAlt]
+            if (nBlocks == 0):
+                slices = np.zeros((nTimes, nLons, nLats))
+                slices[:, :, :] = allData3D['data'][:, :, :, iAlt]
+            else:
+                slices = np.zeros((nTimes, nBlocks, nLons, nLats))
+                slices[:, :, :, :] = allData3D['data'][:, :, :, :, iAlt]
         elif (iLat > -1):
             slices = np.zeros((nTimes, nLons, nAlts))
             slices[:, :, :] = allData3D['data'][:, :, iLat, :]
@@ -123,7 +136,8 @@ def data_slice(allData3D, iLon = -1, iLat = -1, iAlt = -1):
             else:
                 for iL in range(nLons-4):
                     print('ilon : ', iL)
-                    slices[:, :, :] = slices[:, :, :] + allData3D['data'][:, iLon + 2, :, :]
+                    slices[:, :, :] = slices[:, :, :] + \
+                        allData3D['data'][:, iLon + 2, :, :]
                 slices = slices / (nLons-4)
 
     return slices
@@ -140,6 +154,24 @@ def move_centers_to_edges(pos):
     edges = np.append(edges[0] - dpLeft, edges)
     edges = np.append(edges, dpRight + edges[-1])
     return edges
+
+# ----------------------------------------------------------------------------
+# This function calculates the edges of cells based on the centers of the cells
+# it assumes a 2D array.
+# - first is finds the edges in the X direction
+# - then it finds the edges in the Y direction
+# ----------------------------------------------------------------------------
+
+def move_centers_to_corners(pos2d):
+
+    nX, nY = np.shape(pos2d)
+    intermediate = np.zeros((nX + 1, nY))
+    final = np.zeros((nX + 1, nY + 1))
+    for iY in range(nY):
+        intermediate[:, iY] = move_centers_to_edges(pos2d[:,iY])
+    for iX in range(nX + 1):
+        final[iX, :] = move_centers_to_edges(intermediate[iX, :])
+    return final
 
 
 #-----------------------------------------------------------------------------
@@ -165,10 +197,10 @@ def vertically_integrate(value, alts, calc3D = False):
 #-----------------------------------------------------------------------------
 
 def calc_tec(allData3D):
-    nTimes = allData3D['nTimes']
-    nVars = allData3D['nVars']
-    nLons = allData3D['nLons']
-    nLats = allData3D['nLats']
+    nTimes = allData3D['ntimes']
+    nVars = allData3D['nvars']
+    nLons = allData3D['nlons']
+    nLats = allData3D['nlats']
     alts1d = allData3D['alts']
 
     slices = np.zeros((nTimes, nLons, nLats))
