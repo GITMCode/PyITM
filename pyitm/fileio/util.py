@@ -2,7 +2,7 @@
 
 import re
 
-from pyitm.fileio import gitmio
+from pyitm.fileio import gitmio, netcdfio, variables
 import numpy as np
 
 # ----------------------------------------------------------------------------
@@ -26,80 +26,37 @@ def determine_filetype(filename):
     fType = {
         "iGitmBin": 0,
         "iGitmNetcdf": 1,
-        "iAetherNetcdf": 2,
+        "iNetcdf": 2,
         "myfile": -1
-    } 
+    }
     m = re.match(r'(.*)bin', filename)
     if m:
         fType["myfile"] = fType["iGitmBin"]
     else:
-        fType["myfile"] = fType["iAetherNetcdf"]
+        fType["myfile"] = fType["iNetcdf"]
     return fType
-
-# ----------------------------------------------------------------------------
-# ----------------------------------------------------------------------------
-
-def find_string(item, stringList):
-    iVal = -1
-    if (item in stringList):
-        i = 0
-        while (i < len(stringList)):
-            if (stringList[i] == item):
-                iVal = i
-                i = len(stringList)
-            i += 1
-    return iVal
-
-# ----------------------------------------------------------------------------
-# ----------------------------------------------------------------------------
-
-def convert_var_to_number(varList, header = None):
-
-    if (np.isscalar(varList)):
-        if (varList.isnumeric()):
-            iVars = [int(varList)]
-        else:
-            if (header == None):
-                print('Non number variables are not supported yet!')
-                iVars = [3]
-            else:
-                iV = find_string(varList, header['shortname'])
-                if (iV < 0):
-                    iV = find_string(varList, header['vars'])
-                if (iV < 0):
-                    iV = find_string(varList, header['longname'])
-                iVars = [iV]
-    else:
-        iVars = []
-        for var in varList:
-            if (var.isnumeric()):
-                iVars.append(int(var))
-            else:
-                if (header == None):
-                    print('Non number variables are not supported yet!')
-                    iVars = [3]
-                else:
-                    iV = find_string(varList, header['shortname'])
-                    if (iV < 0):
-                        iV = find_string(varList, header['vars'])
-                    if (iV < 0):
-                        iV = find_string(varList, header['longname'])
-                    iVars.append(iV)
-
-    return iVars
 
 # ----------------------------------------------------------------------------
 # ----------------------------------------------------------------------------
 
 def read_all_files(filelist, varToPlot):
 
+    filelist = any_to_filelist(filelist)
     filetype = determine_filetype(filelist[0])
+    print(filelist[0])
+    header = read_header(filelist[0])
     if (filetype["myfile"] == filetype["iGitmBin"]):
-        header = gitmio.read_gitm_headers(filelist[0])
-        varToPlot = convert_var_to_number(varToPlot, header)
-
-    print('vartoplot : ', varToPlot)
-    allData = gitmio.read_gitm_all_files(filelist, varToPlot)
+        varToPlot = variables.get_short_names(varToPlot)
+        varToPlot = variables.convert_var_to_number(varToPlot, header)
+        print('vartoplot : ', varToPlot)
+        allData = gitmio.read_gitm_all_files(filelist, varToPlot)
+    if (filetype["myfile"] == filetype["iNetcdf"]):
+        varToPlot = variables.convert_number_to_var(varToPlot, header)
+        varToPlot = variables.match_var_name(varToPlot, header)
+        if ('NotFound' in varToPlot):
+            allData = None
+        else:
+            allData = netcdfio.read_netcdf_all_files(filelist, varToPlot)
     return allData
 
 # ----------------------------------------------------------------------------
@@ -107,16 +64,39 @@ def read_all_files(filelist, varToPlot):
 
 def read_header(filelist):
 
+    filelist = any_to_filelist(filelist)
     filetype = determine_filetype(filelist[0])
+    isFound = False
     if (filetype["myfile"] == filetype["iGitmBin"]):
         header = gitmio.read_gitm_headers(filelist[0])
-    else:
+        isFound = True
+    if (filetype["myfile"] == filetype["iNetcdf"]):
+        header = netcdfio.read_netcdf_one_header(filelist[0])        
+        isFound = True
+        
+    if (not isFound):
         print('File type not supported at this point!')
+        header = None
 
     return header
 
 
+# ----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
 
+def list_file_info(filelist):
+    
+    filelist = any_to_filelist(filelist)
+    header = read_header(filelist)
+    print('Variables in file (num, var, short, long)')
+    for iVar, var in enumerate(header['vars']):
+        print('%3d' % iVar, '. ', var, ' -> ', \
+              header['shortname'][iVar], ' -> ',
+              header['longname'][iVar])
+    print('Time of file : ', header['time'])
+    return
+
+    
 # ----------------------------------------------------------------------------
 # ----------------------------------------------------------------------------
 
