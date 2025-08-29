@@ -1,0 +1,243 @@
+ GITM2 Run Information
+ ---------------------
+ 
+ nSpecies           6
+ nSpeciesTotal          11
+ Mass of Species O(!U3!NP)              16.000000000000000     
+ Mass of Species O!D2!N                 32.000000000000000     
+ Mass of Species N!D2!N                 28.000000000000000     
+ Mass of Species N(!U4!NS)              14.000000000000000     
+ Mass of Species NO                     30.000000000000000     
+ Mass of Species He                     4.0000000000000000     
+ Mass of Species N(!U2!ND)              14.000000000000000     
+ Mass of Species N(!U2!NP)              14.000000000000000     
+ Mass of Species H                      1.0000000000000000     
+ Mass of Species CO!D2!N                44.000000000000000     
+ Mass of Species O(!U1!ND)              16.000000000000000     
+ 
+ nIons          10
+ nIonsAdvect           2
+ Ion Species O_4SP_!U+!N         
+ Ion Species NO!U+!N             
+ Ion Species O!D2!U+!N           
+ Ion Species N!D2!U+!N           
+ Ion Species N!U+!N              
+ Ion Species O(!U2!ND)!U+!N      
+ Ion Species O(!U2!NP)!U+!N      
+ Ion Species H!U+!N              
+ Ion Species He!U+!N             
+ Ion Species e-                  
+ 
+ Inputs from UAM.in:
+ 
+ #TIMESTART
+        2002
+          12
+          21
+           0
+           0
+           0
+ 
+ #TIMEEND
+        2002
+          12
+          21
+           0
+          20
+           0
+ 
+ #GRID
+           2
+           2
+  -90.000000000000000     
+   90.000000000000000     
+   0.0000000000000000     
+   0.0000000000000000     
+ 
+ #DIFFUSION
+ F
+   50.000000000000000     
+   1.0000000000000000E-002
+   5.0000000000000001E-003
+ 
+ #THERMALCONDUCTION
+   5.5999999999999995E-004
+   7.6000000000000004E-004
+  0.71999999999999997     
+ 
+ #PHOTOELECTRON
+   5.9999999999999998E-002
+ 
+ #NEUTRALHEATING
+   5.0000000000000003E-002
+ 
+ #CFL
+  0.75000000000000000     
+ 
+ #LIMITER
+ mc
+   2.0000000000000000     
+ 
+ #F107
+   177.81961163560990     
+   149.46730768206402     
+ 
+ #THERMO
+ T
+ T
+ T
+ T
+ T
+ T
+ 
+ #FORCING
+ T
+ T
+ T
+ T
+ T
+ T
+ 
+ #APEX
+ F
+ 
+ #IEModels
+ FTA
+ weimer05
+ 
+ #AMIEFILES
+ none
+ none
+ 
+ #STATISTICALMODELSONLY
+ F
+ 
+ #TIDES
+ F
+ T
+ F
+ F
+ 
+ #DUSTDATA
+ F
+ NotSet
+ NotSet
+ 
+ #DUST
+  0.29999999999999999     
+   2.9999999999999999E-002
+ 
+ #GSWMCOMP
+ T
+ T
+ T
+ T
+ 
+ #USEPERTURBATION
+ F
+ 
+ #DAMPING
+ F
+ 
+ #GRAVITYWAVE
+ F
+ 
+ #AURORAMODS
+ F
+   1.0000000000000000     
+ F
+   3.0000000000000000     
+ 
+ #AURORATYPES
+ T
+ F
+ F
+ F
+ 
+ #IONLIMITS
+   100.00000000000000     
+  0.10000000000000001     
+ 
+ #VERTICALSOURCES
+   1000.0000000000000     
+ 
+ #DYNAMO
+ T
+   45.000000000000000     
+         500
+   1.0000000000000000     
+ 
+ #IONFORCING
+ T
+ T
+ T
+ T
+ T
+ 
+ #CHEMISTRY
+ T
+ T
+ T
+ 
+ #FIXTILT
+ F
+ 
+ #DIPOLE
+   0.0000000000000000     
+   0.0000000000000000     
+   0.0000000000000000     
+   0.0000000000000000     
+   0.0000000000000000     
+ 
+ #APEX
+ F
+ 
+ #NEWSTRETCH
+ F
+   45.000000000000000     
+   10.000000000000000     
+   0.0000000000000000     
+ 
+ #STRETCH
+   45.000000000000000     
+   0.0000000000000000     
+   1.0000000000000000     
+ 
+ #TOPOGRAPHY
+ F
+   0.0000000000000000     
+ 
+ #ELECTRODYNAMICS
+   60.000000000000000     
+   60.000000000000000     
+ 
+ #INPUTTIMEDELAY
+   0.0000000000000000     
+   0.0000000000000000     
+ 
+ #LTERadiation
+   8640000.0000000000     
+ 
+ #EUV_DATA
+ T
+ UA/DataIn/FISM/fismflux_daily_2002.dat
+ 
+ #RESTART
+ T
+ 
+ UseCO2Cooling T
+ CO2ppm   225.00000000000000     
+ iInputIonChemType           3
+ iInputNeutralChemType           3
+ RPTAU   6.0999999999999996     
+ PRAD   9.9999999999999995E-007
+ PLONG  0.40000000000000002     
+ Ls_a   7.0000000000000001E-003   6.0000000000000001E-003   4.0000000000000001E-003   4.0000000000000001E-003   2.0000000000000000E-003   2.0000000000000000E-003   2.0000000000000000E-003
+ Ls_tau   2.2353000000000001        2.7543000000000002        1.1176999999999999        15.786600000000000        2.1354000000000002        2.4693999999999998        32.849299999999999     
+ Ls_phi   49.408999999999999        168.17300000000000        191.83699999999999        21.736000000000001        15.704000000000001        95.528000000000006        49.094999999999999     
+ 
+ 
+ 
+ 
+ 
+ 
