@@ -291,8 +291,8 @@ def read_gitm_all_files(filelist, varlist=[-1], verbose=False):
     data = {'times': allTimes,
             'data': allData,
             'vars': vars,
-            'shortname': variables.get_short_names(vars), \
-            'longname': variables.get_long_names(vars), \
+            'shortname': variables.get_short_names(vars),
+            'longname': variables.get_long_names(vars),
             'lons': lons,
             'lats': lats,
             'alts': alts,
