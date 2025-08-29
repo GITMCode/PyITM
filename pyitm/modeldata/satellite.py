@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import numpy as np
-import pandas as pd # for dealing with numpy vs python datetimes
+import pandas as pd # for dealing with numpy vs python datetimes. first lines of extract_1d
 from pyitm.fileio import variables
 
 def extract_1d(sat_locations, model_data, extrapolate=False, verbose=False, interpVar=None):
@@ -18,8 +18,8 @@ def extract_1d(sat_locations, model_data, extrapolate=False, verbose=False, inte
 
     verbose (bool): print debugging info? default=False
 
-    iVar (int or list): which variable (indices) to interpolate. default=None, so 
-        interpolate everything.
+    interpVar (int or list): which variable (indices) to interpolate. default=None, so 
+        interpolate every variable (except lon, lat, alt) in the model_data file
 
     Returns
     -------
@@ -66,18 +66,20 @@ def extract_1d(sat_locations, model_data, extrapolate=False, verbose=False, inte
     lons = np.rad2deg(np.unique(model_data['data'][0, 0, :,0,0]))
     lats = np.rad2deg(np.unique(model_data['data'][0, 1, 0,:,0]))
     alts = model_data['data'][0, 2, 0, 0, :]/1000.0
-    print(lons, lats, alts)
+
     dLon = lons[1] - lons[0]
     dLat = lats[1] - lats[0]
     nAlts = len(alts)
 
     if interpVar is None:
+        # skip first 3 vars, usually lon,lat,alt
         interpVar = range(3, model_data['nVars'])
     if isinstance(interpVar, int):
         interpVar = [interpVar]
 
     outTimes = []
-    outVals = [[] for iVar in interpVar]
+    # outData is a dict to simplify lookups.
+    outVals = {iVar: [] for iVar in interpVar}
 
     for i, time in enumerate(sat_locations['time']):
         
@@ -135,7 +137,7 @@ def extract_1d(sat_locations, model_data, extrapolate=False, verbose=False, inte
                 (  xLon)*(1-yLat)*(  zAlt)*model_data['data'][itb4+1, iVar, iLon+1, jLat, kAltp1]+\
                 (1-xLon)*(  yLat)*(  zAlt)*model_data['data'][itb4+1, iVar, iLon, jLat+1, kAltp1]+\
                 (  xLon)*(  yLat)*(  zAlt)*model_data['data'][itb4+1, iVar, iLon+1, jLat+1, kAltp1]
-            
+
             outVals[iVar].append((1-xt) * BeforeVal + xt * AfterVal)
 
         outTimes.append(time)
@@ -144,14 +146,14 @@ def extract_1d(sat_locations, model_data, extrapolate=False, verbose=False, inte
     outData = {'time': np.array(outTimes)}
 
     for iVar in interpVar:
-        outData[variables.get_short_names(model_data['vars'][iVar])] = np.array(outVals[iVar])
+        outData[variables.get_short_names(model_data['vars'][iVar])[0]] = np.array(outVals[iVar])
     
     # in case any other data was present in original satellite file
     for inKey in sat_locations.keys():
         if inKey != time:
             outData[inKey] = np.array(sat_locations[inKey])
 
-    return outData
+    return outData, outTimes
 
 
 
