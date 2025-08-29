@@ -22,22 +22,31 @@ def get_min_max_data(allSlices, yPos, \
     if (color == 'red'):
         cmap = mpl.cm.YlOrRd
 
-    mask = ((yPos >= yMin) & (yPos <= yMax))
-    if (mask.max()):    
+    if (yPos is None):
+        maxi = allSlices.max() * 1.01
+        mini = allSlices.min() * 0.99
+        amaxi = np.abs(allSlices).max() * 1.05
         doPlot = True
-        maxi = allSlices[:, :, mask].max() * 1.01
-        mini = allSlices[:, :, mask].min() * 0.99
-    
-        if ((mini < 0.0) and (not isLog)):
-            symmetric = True
-            cmap = mpl.cm.bwr
-            maxi = abs(allSlices[:, :, mask]).max() * 1.05
-            mini = -maxi
+        mask = None
 
     else:
-        doPlot = False
-        mini = -1.0
-        maxi = 1.0
+        mask = ((yPos >= yMin) & (yPos <= yMax))
+        if (mask.max()):    
+            doPlot = True
+            maxi = allSlices[:, :, mask].max() * 1.01
+            mini = allSlices[:, :, mask].min() * 0.99
+            amaxi = np.abs(allSlices[:, :, mask]).max() * 1.05
+    
+        else:
+            doPlot = False
+            mini = -1.0
+            maxi = 1.0
+
+    if ((mini < 0.0) and (not isLog)):
+        symmetric = True
+        cmap = mpl.cm.bwr
+        maxi = amaxi
+        mini = -maxi
 
     if (minVal < 1e31):
         mini = minVal
