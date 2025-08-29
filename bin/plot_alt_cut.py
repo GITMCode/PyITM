@@ -16,6 +16,10 @@ from pyitm.modeldata import utils
 from pyitm.plotting import plotutils
 from pyitm.plotting import plotters
 
+# ----------------------------------------------------------------------------
+# Get arguments as inputs into the code
+#-----------------------------------------------------------------------------
+
 def get_args():
 
     parser = argparse.ArgumentParser(
@@ -58,25 +62,12 @@ def get_args():
     return args
 
 
-# Needed to run main script as the default executable from the command line
-if __name__ == '__main__':
+# ----------------------------------------------------------------------------
+# This assumes you have no blocks, and an easily defined grid
+#-----------------------------------------------------------------------------
 
-    # Get the input arguments
-    args = get_args()
-    filelist = args.filelist
-    varToPlot = args.var
+def plot_sphere(args, allData):
 
-    if (args.list):
-        util.list_file_info(filelist)
-        exit()
-    
-    allData = util.read_all_files(filelist, varToPlot)
-
-    if (not allData):
-        util.list_file_info(filelist)
-        exit()
-            
-    altGoal = args.alt
     alts1d = allData['alts'][0, 0, :]
     diff = np.abs(alts1d - altGoal)
     iAlt = np.argmin(diff)
@@ -114,3 +105,73 @@ if __name__ == '__main__':
                                    filenamePrefix = sFilePre,
                                    xLimits = [args.lonmin, args.lonmax],
                                    yLimits = [args.latmin, args.latmax])   
+
+    return
+
+# ----------------------------------------------------------------------------
+# This assumes you have blocks, like a cubesphere grid
+#-----------------------------------------------------------------------------
+
+def plot_cubesphere(args, allData):
+
+    alts1d = allData['alts'][0, 0, 0, :]
+    diff = np.abs(alts1d - altGoal)
+    iAlt = np.argmin(diff)
+    realAlt = alts1d[iAlt]
+
+    allSlices = utils.data_slice(allData, iAlt = iAlt)
+    varName = allData['longname'][0]
+    sVarNum = allData['shortname'][0] + '_'
+    sAltNum = 'alt%04d_' % int(realAlt)
+
+    allTimes = allData['times']
+
+    # get min and max values, plus color table:
+    dataMinMax = plotutils.get_min_max_data(allSlices, None, \
+                     color = 'red', \
+                     minVal = 1e32, maxVal = -1e32)
+    
+    lons3d = allData['lons'][:, :, :, iAlt]
+    lats3d = allData['lats'][:, :, :, iAlt]
+    
+    sFilePre = sVarNum + sAltNum
+    sTitleAdd = '; Alt: %.0f km' % realAlt
+    plotters.plot_series_of_slices_wblocks(allSlices,
+                                           allTimes,
+                                           lons3d,
+                                           lats3d,
+                                           dataMinMax,
+                                           xLabel = 'Longitude (deg)',
+                                           yLabel = 'Latitude (deg)',
+                                           varName = varName,
+                                           titleAddOn = sTitleAdd,
+                                           filenamePrefix = sFilePre,
+                                           xLimits = [args.lonmin, args.lonmax],
+                                           yLimits = [args.latmin, args.latmax])
+
+# Needed to run main script as the default executable from the command line
+if __name__ == '__main__':
+
+    # Get the input arguments
+    args = get_args()
+    filelist = args.filelist
+    varToPlot = args.var
+
+    if (args.list):
+        util.list_file_info(filelist)
+        exit()
+    
+    allData = util.read_all_files(filelist, varToPlot)
+
+    if (not allData):
+        util.list_file_info(filelist)
+        exit()
+
+    altGoal = args.alt
+    
+    if (allData['nblocks'] == 0):
+        plot_sphere(args, allData)
+        
+    if (allData['nblocks'] > 0):
+        plot_cubesphere(args, allData)
+        
