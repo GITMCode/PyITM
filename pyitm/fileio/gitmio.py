@@ -73,10 +73,11 @@ def read_gitm_headers(input_files='./3DALL*.bin', verbose=False):
     
     header = {"nFiles": len(filelist), \
               "version": 0.1, #TODO
-              "nLons": 0, \
-              "nLats": 0, \
-              "nAlts": 0, \
-              "nVars": 0, \
+              "nlons": 0, \
+              "nlats": 0, \
+              "nalts": 0, \
+              "nblocks": 0, \
+              "nvars": 0, \
               "vars": [], \
               "shortname": [], \
               "longname": [], \
@@ -164,10 +165,11 @@ def read_gitm_one_file(file_to_read, varlist=[-1], verbose=True):
         print('-> Reading file : ' + file_to_read, ' --> Vars : ', varlist)
 
     data = {"version": 0, \
-            "nLons": 0, \
-            "nLats": 0, \
-            "nAlts": 0, \
-            "nVars": 0, \
+            "nlons": 0, \
+            "nlats": 0, \
+            "nalts": 0, \
+            "nblocks": 0, \
+            "nvars": 0, \
             "time": 0, \
             "vars": [],
             "shortname": [], \
@@ -296,11 +298,12 @@ def read_gitm_all_files(filelist, varlist=[-1], verbose=False):
             'lons': lons,
             'lats': lats,
             'alts': alts,
-            'nTimes': nTimes,
-            'nVars': nVars,
-            'nLons' : nLons,
-            'nLats': nLats,
-            'nAlts': nAlts}
+            'ntimes': nTimes,
+            'nvars': nVars,
+            'nlons' : nLons,
+            'nlats': nLats,
+            'nblocks': 0,
+            'nalts': nAlts}
     
     return data
 
