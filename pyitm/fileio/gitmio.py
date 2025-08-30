@@ -71,7 +71,7 @@ def read_gitm_headers(input_files='./3DALL*.bin', verbose=False):
     if verbose:
         print("  -> Found ", len(filelist), "files")
     
-    header = {"nFiles": len(filelist), \
+    header = {"ntimes": len(filelist), \
               "version": 0.1, #TODO
               "nlons": 0, \
               "nlats": 0, \
@@ -81,7 +81,7 @@ def read_gitm_headers(input_files='./3DALL*.bin', verbose=False):
               "vars": [], \
               "shortname": [], \
               "longname": [], \
-              "time": [], \
+              "times": [], \
               "filename": [] }
 
     for file in filelist:
@@ -106,16 +106,16 @@ def read_gitm_headers(input_files='./3DALL*.bin', verbose=False):
         (oldLen, recLen)=unpack(endChar+'2l',f.read(8))
 
         # Read grid size information.
-        (header["nLons"],header["nLats"],header["nAlts"]) = \
+        (header["nlons"],header["nlats"],header["nalts"]) = \
             unpack(endChar+'lll',f.read(recLen))
         (oldLen, recLen)=unpack(endChar+'2l',f.read(8))
 
         # Read number of variables.
-        header["nVars"]=unpack(endChar+'l',f.read(recLen))[0]
+        header["nvars"]=unpack(endChar+'l',f.read(recLen))[0]
         (oldLen, recLen)=unpack(endChar+'2l',f.read(8))
 
         # Collect variable names.
-        for i in range(header["nVars"]):
+        for i in range(header["nvars"]):
             v = unpack(endChar+'%is'%(recLen),f.read(recLen))[0]
             if (file == filelist[0]):
                 header["vars"].append(v.decode('utf-8').replace(" ",""))
@@ -123,7 +123,7 @@ def read_gitm_headers(input_files='./3DALL*.bin', verbose=False):
 
         # Extract time. 
         (yy,mm,dd,hh,mn,ss,ms)=unpack(endChar+'lllllll',f.read(recLen))
-        header["time"].append(datetime(yy,mm,dd,hh,mn,ss,ms*1000))
+        header["times"].append(datetime(yy,mm,dd,hh,mn,ss,ms*1000))
 
         f.close()
 
@@ -147,7 +147,7 @@ def read_gitm_one_file(file_to_read, varlist=[-1], verbose=True):
 
     Returns
     -------
-    data["time"]: datetime of the file
+    data["times"]: datetime of the file
     data[NUMBER]: data that is read in.
                   NUMBER goes from 0 - number of vars read in (0-3 typical)
     (Also include header information, as described above)
@@ -170,7 +170,7 @@ def read_gitm_one_file(file_to_read, varlist=[-1], verbose=True):
             "nalts": 0, \
             "nblocks": 0, \
             "nvars": 0, \
-            "time": 0, \
+            "times": 0, \
             "vars": [],
             "shortname": [], \
             "longname": [], \
@@ -213,7 +213,7 @@ def read_gitm_one_file(file_to_read, varlist=[-1], verbose=True):
     
         # Extract time. 
         (yy,mm,dd,hh,mn,ss,ms)=unpack(endChar+'lllllll',f.read(recLen))
-        data["time"] = datetime(yy,mm,dd,hh,mn,ss,ms*1000)
+        data["times"] = datetime(yy,mm,dd,hh,mn,ss,ms*1000)
     
         # Header is this length:
         # Version + start/stop byte
@@ -268,7 +268,7 @@ def read_gitm_all_files(filelist, varlist=[-1], verbose=False):
     if varlist != [-1]:
        nVars = len(varlist)
     else: # varlist=[-1] means we read in all variables
-        nVars = read_gitm_headers(filelist[0], verbose=False)['nVars']
+        nVars = read_gitm_headers(filelist[0], verbose=False)['nvars']
         varlist = list(range(nVars))
 
     if (nVars == 1):
@@ -279,7 +279,7 @@ def read_gitm_all_files(filelist, varlist=[-1], verbose=False):
     allTimes = []
     for iTime, filename in enumerate(filelist):
         data = read_gitm_one_file(filename, varlist, verbose=verbose)
-        allTimes.append(data["time"])
+        allTimes.append(data["times"])
         for iVar, var in enumerate(varlist):
             if (nVars == 1):
                 allData[iTime, :, :, :] = data["data"][var][:, :, :]
@@ -305,6 +305,7 @@ def read_gitm_all_files(filelist, varlist=[-1], verbose=False):
             'nblocks': 0,
             'nalts': nAlts}
     
+    print('data keys : ', data.keys())
     return data
 
 
@@ -339,7 +340,7 @@ def gitm_extract_data(locations, times, variables, dir = './'):
     dLat = Lats[1]-Lats[0]
     dLon = Lons[1]-Lons[0]
 
-    nFiles = len(headers["time"])
+    nFiles = len(headers["times"])
     nPts = len(locations["lats"])
 
     SatLats = locations["lats"]
@@ -391,14 +392,14 @@ def gitm_extract_data(locations, times, variables, dir = './'):
 
         iFileSave = -1
         for iFile in range(nFiles):
-            if (times[iPt] >= headers["time"][iFile]):
+            if (times[iPt] >= headers["times"][iFile]):
                 iFileSave = iFile
         if (iFileSave == nFiles-1 or iFileSave == -1):
             i = nFiles-2
             r = 1.0
         else:
             i = iFileSave
-            r = (times[iPt] - headers["time"][i]).total_seconds() / (headers["time"][i+1] - headers["time"][i]).total_seconds()
+            r = (times[iPt] - headers["times"][i]).total_seconds() / (headers["times"][i+1] - headers["times"][i]).total_seconds()
 
         if (iPt == 0):
             iFileLeft = i
