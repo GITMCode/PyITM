@@ -26,7 +26,8 @@ def get_args():
         description = 'Plot Aether / GITM model results')
     
     # select altitude to plot:
-    parser.add_argument('-alt', metavar = 'alt', default = 400.0, type = float, \
+    parser.add_argument('-alt', metavar = 'alt',
+                        default = 400.0, type = float, \
                         help = 'altitude :  alt in km (closest)') 
 
     # variable to plot as a number
@@ -41,13 +42,13 @@ def get_args():
                         help = 'manually set the maxiumum value for the plots')
     
     parser.add_argument('-latmin',  default = -90, type = float, \
-                        help = 'manually set the minimum latitude for the plots')
+                        help = 'manually set the min latitude for the plots')
     parser.add_argument('-latmax',  default = 90, type = float, \
-                        help = 'manually set the maxiumum latitude for the plots')
+                        help = 'manually set the max latitude for the plots')
     parser.add_argument('-lonmin',  default = 0, type = float, \
-                        help = 'manually set the minimum longitude for the plots')
+                        help = 'manually set the min longitude for the plots')
     parser.add_argument('-lonmax',  default = 360, type = float, \
-                        help = 'manually set the maxiumum latitude for the plots')
+                        help = 'manually set the max longitude for the plots')
 
     parser.add_argument('-list',  \
                         action='store_true', default = False, \
