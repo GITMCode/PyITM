@@ -5,6 +5,19 @@ import numpy as np
 # ----------------------------------------------------------------------------
 # ----------------------------------------------------------------------------
 
+def strip_varname(varnameIn):
+
+    ind = varnameIn.find('(')
+    if (ind > 0):
+        varnameOut = varnameIn[0:ind]
+    else:
+        varnameOut = varnameIn
+        
+    return varnameOut
+
+# ----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
+
 def find_string(item, stringList):
     iVal = -1
     if (item in stringList):
@@ -261,7 +274,7 @@ def get_short_names(varsIn):
                 varsOut.append(mapVars[var.lower()])
                 isFound = True
         if (not isFound):
-            varsOut.append(var)
+            varsOut.append(strip_varname(var))
     return varsOut
 
 #-----------------------------------------------------------------------------
