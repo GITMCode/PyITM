@@ -2,7 +2,20 @@
 
 import numpy as np
 
+# The general idea here is that each code has a bunch of variables that are
+# named in different ways.  What we essentially want for each code is that
+# you can call a plotter or reader with variable names in different ways:
+# - as an actual number (e.g., 15)
+# - as a number string  (e.g., '15')
+# - as a short variable (e.g., 'Tn')
+# - as the actual variable (e.g., 'Temperature_neutral')
+# The codes should then be able to figure out what you are asking for.
+# These codes then get a bit complicated, since they have to do all sorts
+# of interpreting of what you want versus what you provided.
+
 # ----------------------------------------------------------------------------
+# This code takes something like 'Temperature (K)' and converts it to
+# 'Temperature'. This is extremely useful when naming files with variable names
 # ----------------------------------------------------------------------------
 
 def strip_varname(varnameIn):
@@ -16,6 +29,7 @@ def strip_varname(varnameIn):
     return varnameOut
 
 # ----------------------------------------------------------------------------
+# this returns the index of the array that matches the string, if it is found
 # ----------------------------------------------------------------------------
 
 def find_string(item, stringList):
@@ -30,8 +44,9 @@ def find_string(item, stringList):
     return iVal
 
 # ----------------------------------------------------------------------------
-# Take variable numbers or names and make sure that they are all names
-# coming out.  Is the user enters a name, it will just use the name.  If the
+# Take variable numbers (as a number or a string of a number) or names and 
+# make sure that they are all names
+# coming out.  If the user enters a name, it will just use the name.  If the
 # user enters a number, this function will take the Nth variable in the
 # list of variables returned from the header.
 # ----------------------------------------------------------------------------
@@ -39,6 +54,8 @@ def find_string(item, stringList):
 def convert_number_to_var(varList, header = None):
 
     if (np.isscalar(varList)):
+        if (not isinstance(varList, str)):
+            varList = '%d' % int(varList)
         if (varList.isnumeric()):
             if (header):
                 sVars = [header['vars'][int(varList)]]
@@ -48,6 +65,8 @@ def convert_number_to_var(varList, header = None):
     else:
         sVars = []
         for var in varList:
+            if (not isinstance(var, str)):
+                var = '%d' % int(var)
             if (var.isnumeric()):
                 if (header):
                     sVars.append(header['vars'][int(var)])
@@ -57,6 +76,9 @@ def convert_number_to_var(varList, header = None):
     return sVars
     
 # ----------------------------------------------------------------------------
+# This function takes a variable name and tries to figure out what 
+# number it is in the file.  In order for this to work, the header
+# has to be provided, since it has to look for the variable in the header
 # ----------------------------------------------------------------------------
 
 def convert_var_to_number(varList, header = None):
@@ -98,7 +120,10 @@ def convert_var_to_number(varList, header = None):
     return iVars
 
 #-----------------------------------------------------------------------------
-# remap gitm variables
+# take a list of variables, and try to figure out what the user is 
+# actually asking for.  First, everything is converted to lower
+# case so it can match 'Temperature' with 'temperature'. Then,
+# it compares to variables in the header, longnames, and shortnames.
 #-----------------------------------------------------------------------------
 
 def match_var_name(varsIn, header):
@@ -129,7 +154,8 @@ def match_var_name(varsIn, header):
     return varsOut
 
 #-----------------------------------------------------------------------------
-# remap gitm variables
+# remap gitm variables - turn the output of GITM into human-digestible
+# names AND add units to them.
 #-----------------------------------------------------------------------------
 
 def remap_variable_names(varsIn):
@@ -183,7 +209,9 @@ def remap_variable_names(varsIn):
     return varsOut
 
 #-----------------------------------------------------------------------------
-# remap gitm variables
+# remap gitm variables - take the GITM names and match them with 
+# names that are very short and terse - that could be used for 
+# filenames, for example.
 #-----------------------------------------------------------------------------
 
 def get_short_names(varsIn):
@@ -263,7 +291,6 @@ def get_short_names(varsIn):
         'Vi(up)': 'Viv'}
 
     varsOut = []
-
     for var in varsIn:
         isFound = False
         if (var in mapVars):
@@ -278,7 +305,8 @@ def get_short_names(varsIn):
     return varsOut
 
 #-----------------------------------------------------------------------------
-# remap gitm variables
+# remap gitm variables - Take the GITM variable names and expand them so
+# that they could be used for things like publications.
 #-----------------------------------------------------------------------------
 
 def get_long_names(varsIn):
