@@ -77,6 +77,7 @@ def read_netcdf_one_file(filename, file_vars = None, verbose = False):
             'units': '',
             'long_name': None}
 
+    print('-> Reading netcdf : ', filename, ' --> Vars : ', file_vars)
     with Dataset(filename, 'r') as ncfile:
         # Process header information: nlons, nlats, nalts, nblocks
         data['nlons'] = len(ncfile.dimensions['lon'])
@@ -151,7 +152,6 @@ def read_netcdf_one_header(filename):
     """
 
     # Checks for file existence
-    print(filename)
     if not os.path.isfile(filename):
         raise IOError(f"unknown aether netCDF blocked file: {filename}")
 
@@ -184,7 +184,9 @@ def read_netcdf_one_header(filename):
                                                 'long_name'))
             else:
                 data['longname'].append(key)
-            data['vars'].append(key)
+            # Only store variables that have at least 2 dimensions (exclude time!)
+            if (len(ncfile.variables[key].shape) > 1): 
+                data['vars'].append(key)
 
         data['time'] = \
             tc.epoch_to_datetime(np.array(ncfile.variables['time'])[0])
@@ -261,7 +263,7 @@ def read_netcdf_all_files(filelist, varlist=[-1], verbose=False):
         if (nVars == 1):
             allData = np.zeros((nTimes, nBlocks, nLons, nLats, nAlts))
         else:
-            allData = np.zeros((nTimes, nVars, nBlock, nLons, nLats, nAlts))
+            allData = np.zeros((nTimes, nVars, nBlocks, nLons, nLats, nAlts))
 
     for iTime, filename in enumerate(filelist):
         data = read_netcdf_one_file(filename, varlist, verbose=verbose)
