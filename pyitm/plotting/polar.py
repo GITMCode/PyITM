@@ -73,15 +73,9 @@ def plot_polar_region(fig, axplot, lon_pos2d, lat_pos2d, values2d,
                 linestyle = ':', color = 'k', linewidth = 0.5)
     axplot.set_axis_off()
 
-    x, y = rt_to_xy( maxR * 1.5, 132.0/180. * np.pi)
-    axplot.text(x, y, title,
-                verticalalignment = 'top',
-                horizontalalignment = 'left',
-                fontsize = 14)
-    x, y = rt_to_xy( maxR + 1, 55/180. * np.pi)
-    axplot.text(x, y, cbar_label,
+    axplot.text(0.0, maxR * 1.1, title,
                 verticalalignment = 'bottom',
-                horizontalalignment = 'left',
+                horizontalalignment = 'center',
                 fontsize = 14)
     x, y = rt_to_xy( maxR + 1, -np.pi/2)
     axplot.text(x, y, '00 LT',
@@ -101,6 +95,7 @@ def plot_polar_region(fig, axplot, lon_pos2d, lat_pos2d, values2d,
     axplot.set_ylim([-maxR, maxR])
 
     cbar = fig.colorbar(conn, ax = axplot, shrink=0.5, pad=0.005)
+    cbar.set_label(cbar_label, rotation=90)
 
     return
 

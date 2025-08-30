@@ -167,6 +167,96 @@ def plot_slices_wpolar(allSlices,
 
     return
 
+
+# ----------------------------------------------------------------------------
+# Plot a series of slices
+#   allSlices: 3D - [time, xpositions, ypositions]
+#   xPosEdges: 1D - [xpositions] (edges of cells, not centers)
+#   yPosEdges: 1D - [ypositions] (edges of cells, not centers)
+#   dataMinMax: dictionary that contains info on min, max, and color map
+#   varName: puts this string on the colorbar
+#   titleAddOn: puts this string after the time on the title
+#   xLabel: string label for the x axis
+#   yLabel: string label for the y axis
+#   filenamePrefix: string to add before time for filename (like varX_)
+#   xLimits: limits for the x axis - (array of 2 elements)
+#   yLimits: limits for the y axis - (array of 2 elements)
+#   dpi: dots per inch for file
+# ----------------------------------------------------------------------------
+
+def plot_slices_polar_only(allSlices,
+                           allTimes,
+                           lons2d,
+                           lats2d,
+                           dataMinMax,
+                           plotNorth = True,
+                           plotSouth = True,
+                           varName = '',
+                           titleAddOn = '',
+                           xLabel = '',
+                           yLabel = '',
+                           filenamePrefix = '',
+                           xLimits = [0, 0],
+                           yLimits = [0, 0],
+                           dpi = 120):
+
+    for iTime, uTime in enumerate(allTimes):
+        
+        sTimeOut = uTime.strftime('%y%m%d_%H%M%S')
+        title = uTime.strftime("%d %b %Y %H:%M:%S UT") + titleAddOn
+        values2d = allSlices[iTime, :, :]
+
+        if (plotNorth):
+        
+            fig = plt.figure(constrained_layout=False, figsize=(5.4, 5))
+            pos = [0.04, 0.04, 0.95, 0.85]
+            ax = fig.add_axes(pos)
+
+            whichPole = 'North'
+            lats1d = lats2d[0,:]
+            mask = lats1d >= 40.0
+            polar.plot_polar_region(fig, ax,
+                                    lons2d[:,mask],
+                                    lats2d[:,mask],
+                                    values2d[:,mask],
+                                    uTime, whichPole,
+                                    dataMinMax['mini'],
+                                    dataMinMax['maxi'],
+                                    dataMinMax['cmap'],
+                                    title = title, cbar_label = varName)
+            outFile = filenamePrefix + sTimeOut + 'n.png'
+            print(" ==> Writing file : ", outFile)
+            fig.savefig(outFile, dpi = dpi)
+            plt.close(fig)
+
+        if (plotSouth):
+            
+            fig = plt.figure(constrained_layout=False, figsize=(5.4, 5))
+            pos = [0.04, 0.04, 0.95, 0.85]
+            ax = fig.add_axes(pos)
+            
+            whichPole = 'South'
+            lats1d = lats2d[0,:]
+            mask = lats1d <= -40.0
+            polar.plot_polar_region(fig, ax,
+                                    lons2d[:,mask],
+                                    lats2d[:,mask],
+                                    values2d[:,mask],
+                                    uTime, whichPole,
+                                    dataMinMax['mini'],
+                                    dataMinMax['maxi'],
+                                    dataMinMax['cmap'],
+                                    title = title, cbar_label = varName)
+        
+            outFile = filenamePrefix + sTimeOut + 's.png'
+            print(" ==> Writing file : ", outFile)
+            fig.savefig(outFile, dpi = dpi)
+            plt.close(fig)
+
+    return
+
+
+
 # ----------------------------------------------------------------------------
 # Plot a series of slices
 #   allSlices: 3D - [time, xpositions, ypositions]
