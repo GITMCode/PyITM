@@ -289,14 +289,23 @@ def plot_series_of_slices_wblocks(allSlices,
 
     nBlocks, nX, nY = np.shape(lonPos3d)
     
+    isUniform = utils.calc_if_uniform_grid(lonPos3d, latPos3d)
+
+    if (isUniform):
+        print('  -> Seems to be a uniform grid, with blocks!')
+
     for iTime, uTime in enumerate(allTimes):
 
-        fig = plt.figure(constrained_layout=False, figsize=(8.1, 7.5))
-        ax = fig.add_axes([0.07, 0.06, 0.97, 0.48])
-        # Top Left Graph Northern Hemisphere
-        ax2 = fig.add_axes([0.06, 0.55, 0.425, 0.43])
-        # Top Right Graph Southern Hemisphere
-        ax3 = fig.add_axes([0.535, 0.55, 0.425, 0.43])
+        if (isUniform):
+            fig = plt.figure(figsize=(10, 5.5), dpi = dpi)
+            ax = fig.add_axes([0.07, 0.06, 0.97, 0.9])
+        else:
+            fig = plt.figure(constrained_layout=False, figsize=(8.1, 7.5))
+            ax = fig.add_axes([0.07, 0.06, 0.97, 0.48])
+            # Top Left Graph Northern Hemisphere
+            ax2 = fig.add_axes([0.06, 0.55, 0.425, 0.43])
+            # Top Right Graph Southern Hemisphere
+            ax3 = fig.add_axes([0.535, 0.55, 0.425, 0.43])
         
         title = uTime.strftime("%d %b %Y %H:%M:%S UT") + titleAddOn
 
@@ -307,7 +316,7 @@ def plot_series_of_slices_wblocks(allSlices,
             lat2dedges = utils.move_centers_to_corners(lat2d)
             values2d = allSlices[iTime, iBlock, 2:-2, 2:-2]
 
-            if (np.abs(np.mean(lat2d)) < 45.0):
+            if ((np.abs(np.mean(lat2d)) < 45.0) or (isUniform)):
                 con = ax.pcolormesh(lon2dedges, lat2dedges, values2d, \
                                     cmap = dataMinMax['cmap'], \
                                     vmin = dataMinMax['mini'], \
