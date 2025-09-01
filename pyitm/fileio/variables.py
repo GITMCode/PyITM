@@ -288,7 +288,29 @@ def get_short_names(varsIn):
         'velocity_up_ion': 'Viv',
         'Vi(east)': 'Vie',
         'Vi(north)': 'Vin',
-        'Vi(up)': 'Viv'}
+        'Vi(up)': 'Viv',
+        'VerticalTEC': 'TEC',
+        'Potential': 'pot',
+        'PedersenConductance': 'PedCond',
+        'HallConductance': 'HalCond',
+        'Electron_Average_Energy_Diffuse': 'AveE',
+        'Electron_Energy_Flux_Diffuse': 'eFlux',
+        'Electron_Average_Energy_Wave': 'AveE_W',
+        'Electron_Energy_Flux_Wave': 'eFlux_w',
+        'Electron_Average_Energy_Mono': 'AveE_M',
+        'Electron_Energy_Flux_Mono': 'eFlux_M',
+        'Ion_Average_Energy': 'AveE_I',
+        'Ion_Energy_Flux': 'eFlux_I',
+        'AltIntJouleHeating(W/m2)': 'JouleHeat',
+        'AltIntHeatingTransfer(W/m2)': 'HeatTrans',
+        'AltIntEuvHeating(W/m2)': 'EuvHeat',
+        'AltIntPhotoElectronHeating(W/m2)': 'PhotoElecHeat',
+        'AltIntChamicalHeating(W/m2)': 'ChemHeat',
+        'AltIntRadCooling(W/m2)': 'RadCool',
+        'AltIntCO2Cooling(W/m2)': 'CO2Cool',
+        'AltIntNOCooling(W/m2)': 'NOCool',
+        'AltIntOCooling(W/m2)': 'OCool'}
+
 
     varsOut = []
     for var in varsIn:
