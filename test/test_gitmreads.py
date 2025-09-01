@@ -6,8 +6,10 @@
 import sys
 sys.path.insert(0,'/home/ridley/Software/PyITM/')
 
-
+import os
 from pyitm.fileio import util
+from pyitm.general import system
+
 
 def display_info(data):
     print('  keys : ', data.keys())
@@ -29,7 +31,6 @@ def display_info(data):
 dat0 = util.read_all_files("data/2DANC_t021221_002000.bin", verbose=True)
 print('Info on first file (dat0) : ')
 display_info(dat0)
-
 
 dat1 = util.read_all_files("data/3DALL_t021221_002000.bin", verbose=True, varsToRead = [3,2,1,6,17])
 print('Info on second file (dat1) : ')
@@ -59,6 +60,14 @@ nc3 = util.read_all_files("data/3DALG_20110320_001000.nc", varsToRead = ['Tn'])
 print('Info on first nc file (nc3, reading var = Tn) : ')
 display_info(nc3)
 
+command = 'bin/plot_alt_wpolar.py data/2DGEL_t021221_002000.bin -var=eFlux'
+system.run_command(command, verbose =True)
+
+command = 'bin/plot_alt_cut.py data/3DALG_20110320_001000.nc -var=Ve -alt=300'
+system.run_command(command, verbose =True)
+
+command = 'bin/plot_alt_cut.py data/3DALG_20110320_090000.nc -var=Tn -alt=300'
+system.run_command(command, verbose =True)
 
 # dat = gitmio.read_one_to_xr("data/2DGEL_t021221_002000.bin", verbose=True)
 # dat = gitmio.read_multiple_to_xr("data/2DG*", verbose=True)
