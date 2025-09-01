@@ -98,7 +98,7 @@ def list_file_info(filelist):
         print('%3d' % iVar, '. ', var, ' -> ', \
               header['shortname'][iVar], ' -> ',
               header['longname'][iVar])
-    print('Time of file : ', header['time'])
+    print('Time of file : ', header['times'])
     return
 
     
