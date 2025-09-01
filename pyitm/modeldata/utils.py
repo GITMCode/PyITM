@@ -2,6 +2,38 @@
 
 import numpy as np
 
+
+#----------------------------------------------------------------------------
+# Test to see if grid is uniform:
+#----------------------------------------------------------------------------
+
+def calc_if_uniform_grid(lonsWblock2d, latsWblock2d):
+
+    nBlocks = len(lonsWblock2d[:, 0, 0])
+
+    # Let's figure out if we have a uniform horizontal grid:
+    isUniform = True
+
+    for iBlock in range(nBlocks):
+        # Assume first 3 variables are lon, lat, alt:
+        longitude = lonsWblock2d[iBlock, :, :]
+        latitude = latsWblock2d[iBlock, :, :]
+
+        if (iBlock == 0):
+            dLon = longitude[1, 0] - longitude[0, 0]
+            dLat = latitude[0, 1] - latitude[0, 0]
+        else:
+            dLonT = longitude[1, 0] - longitude[0, 0]
+            dLatT = latitude[0, 1] - latitude[0, 0]
+            if (np.abs(dLat - dLatT) > dLat/1000.0):
+                isUniform = False
+            if (np.abs(dLon - dLonT) > dLon/1000.0):
+                isUniform = False
+
+    return isUniform
+
+
+
 #-----------------------------------------------------------------------------
 # find which cut direction to make, then extract a bunch of information
 # based on that decision.
