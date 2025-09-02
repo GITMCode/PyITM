@@ -113,7 +113,7 @@ def plot_sphere(args, allData):
 # This assumes you have blocks, like a cubesphere grid
 #-----------------------------------------------------------------------------
 
-def plot_cubesphere(args, allData):
+def plot_blocks(args, allData):
 
     alts1d = allData['alts'][0, 0, 0, :]
     diff = np.abs(alts1d - altGoal)
@@ -170,9 +170,13 @@ if __name__ == '__main__':
 
     altGoal = args.alt
     
+
+    isSameAlts = utils.calc_if_same_alts(allData['alts'])
+    print('issame = ', isSameAlts)
+
     if (allData['nblocks'] == 0):
         plot_sphere(args, allData)
         
     if (allData['nblocks'] > 0):
-        plot_cubesphere(args, allData)
+        plot_blocks(args, allData)
         
