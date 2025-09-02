@@ -73,7 +73,7 @@ def extract_1d(sat_locations, model_data, extrapolate=False, verbose=False, inte
 
     if interpVar is None:
         # skip first 3 vars, usually lon,lat,alt
-        interpVar = range(3, model_data['nVars'])
+        interpVar = range(3, model_data['nvars'])
     if isinstance(interpVar, int):
         interpVar = [interpVar]
 
