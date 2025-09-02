@@ -314,15 +314,11 @@ def get_short_names(varsIn):
 
     varsOut = []
     for var in varsIn:
-        isFound = False
         if (var in mapVars):
             varsOut.append(mapVars[var])
-            isFound = True
-        if (not isFound):
-            if (var.lower() in mapVars):
-                varsOut.append(mapVars[var.lower()])
-                isFound = True
-        if (not isFound):
+        elif (var.lower() in mapVars):
+            varsOut.append(mapVars[var.lower()])
+        else:
             varsOut.append(strip_varname(var))
     return varsOut
 
@@ -334,7 +330,7 @@ def get_short_names(varsIn):
 def get_long_names(varsIn):
 
     mapVars = {
-        'Rho' : 'Mass Density (km/m3)',
+        'Rho' : 'Mass Density (kg/m3)',
         '[O(3P)]': 'Neutral O Density (/m3)',
         '[O2]': 'Neutral O2 Density (/m3)',
         '[N2]': 'Neutral N2 Density (/m3)',
