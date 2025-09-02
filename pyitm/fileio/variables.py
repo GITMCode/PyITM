@@ -314,15 +314,11 @@ def get_short_names(varsIn):
 
     varsOut = []
     for var in varsIn:
-        isFound = False
         if (var in mapVars):
             varsOut.append(mapVars[var])
-            isFound = True
-        if (not isFound):
-            if (var.lower() in mapVars):
-                varsOut.append(mapVars[var.lower()])
-                isFound = True
-        if (not isFound):
+        elif (var.lower() in mapVars):
+            varsOut.append(mapVars[var.lower()])
+        else:
             varsOut.append(strip_varname(var))
     return varsOut
 
