@@ -2,6 +2,29 @@
 
 import numpy as np
 
+#----------------------------------------------------------------------------
+# Test to see if altitude is changing as a function of lat/lon/block
+#  - this is really to test for the dipole grid
+#----------------------------------------------------------------------------
+
+def calc_if_same_alts(altsWblock3d):
+
+    isSame = True
+    nBlocks = len(altsWblock3d[:, 0, 0, 0])
+
+    nAlts = len(altsWblock3d[0, 0, 0, :])
+
+    for iAlt in range(nAlts):
+        reference = altsWblock3d[0, 0, 0, iAlt]
+        small = 1e-6 * reference
+
+        for iBlock in range(nBlocks):
+            alts2d = altsWblock3d[iBlock, :, :, iAlt]
+            if (np.abs(alts2d[0,0] - reference) > small):
+                isSame = False
+            if (np.abs(alts2d[-1,-1] - reference) > small):
+                isSame = False
+    return isSame
 
 #----------------------------------------------------------------------------
 # Test to see if grid is uniform:
@@ -31,6 +54,35 @@ def calc_if_uniform_grid(lonsWblock2d, latsWblock2d):
                 isUniform = False
 
     return isUniform
+
+#-----------------------------------------------------------------------------
+# find cut in altitude, given that the altitude may vary from point to point
+#-----------------------------------------------------------------------------
+
+def find_alt_points_oneblock(allData, goalAlt):
+
+    nLons = allData['nlons']
+    nLats = allData['nlats']
+    nAlts = allData['nalts']
+
+    iAlts = np.zeros((nLons, nLats)).astype('int')
+
+
+
+    return iAlts
+
+
+def find_alt_points(allData, goalAlt):
+
+    nLons = allData['nlons']
+    nLats = allData['nlats']
+    nAlts = allData['nalts']
+    nBlocks = allData['nblocks']
+
+    #if (nBlocks > 0):
+        
+
+    return 
 
 
 
