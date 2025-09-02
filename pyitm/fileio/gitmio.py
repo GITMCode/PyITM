@@ -304,8 +304,8 @@ def read_gitm_all_files(filelist, varlist=[-1], verbose=False):
             'nlats': nLats,
             'nblocks': 0,
             'nalts': nAlts}
-    
-    print('data keys : ', data.keys())
+    if verbose:
+        print('data keys : ', data.keys())
     return data
 
 
