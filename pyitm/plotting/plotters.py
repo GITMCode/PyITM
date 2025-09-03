@@ -285,6 +285,7 @@ def plot_series_of_slices_wblocks(allSlices,
                                   filenamePrefix = '',
                                   xLimits = [0, 0],
                                   yLimits = [0, 0],
+                                  doScatter = False,
                                   dpi = 120):
 
     nBlocks, nX, nY = np.shape(lonPos3d)
@@ -316,7 +317,12 @@ def plot_series_of_slices_wblocks(allSlices,
             lat2dedges = utils.move_centers_to_corners(lat2d)
             values2d = allSlices[iTime, iBlock, 2:-2, 2:-2]
 
-            if ((np.abs(np.mean(lat2d)) < 45.0) or (isUniform)):
+            if (np.abs(np.mean(lat2d)) > 45.0):
+                doScatter = True
+            if (not isUniform):
+                doScatter = True
+
+            if (not doScatter):
                 con = ax.pcolormesh(lon2dedges, lat2dedges, values2d, \
                                     cmap = dataMinMax['cmap'], \
                                     vmin = dataMinMax['mini'], \
