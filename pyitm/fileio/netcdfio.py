@@ -97,7 +97,7 @@ def read_netcdf_one_file(filename, file_vars = None, verbose = False):
             var = ncfile.variables[key]  # key is var name
             data[key] = DataArray(np.array(var), var.__dict__)
 
-        data['time'] = \
+        data['times'] = \
             tc.epoch_to_datetime(np.array(ncfile.variables['time'])[0])
 
         try:
@@ -132,7 +132,7 @@ def read_netcdf_one_header(filename):
         nalts - number of altitude grids per block
         nblocks - number of blocks in file
         vars - list of data variable names
-        time - datetime for time of file
+        times - datetime for time of file
         isEnsemble - if true, stores ensembleNumber and ensembleMembers
         The dictionary also contains a read_routines.DataArray keyed to the
         corresponding variable name. Each DataArray carries both the variable's
@@ -175,20 +175,20 @@ def read_netcdf_one_header(filename):
         data['longname'] = []
         data['units'] = []
         for key in ncfile.variables.keys():
-            if hasattr(ncfile.variables[key], 'units'):
-                data['units'].append(getattr(ncfile.variables[key], 'units'))
-            else:
-                data['units'].append('')
-            if hasattr(ncfile.variables[key], 'long_name'):
-                data['longname'].append(getattr(ncfile.variables[key],
-                                                'long_name'))
-            else:
-                data['longname'].append(key)
             # Only store variables that have at least 2 dimensions (exclude time!)
             if (len(ncfile.variables[key].shape) > 1): 
                 data['vars'].append(key)
+                if hasattr(ncfile.variables[key], 'units'):
+                    data['units'].append(getattr(ncfile.variables[key], 'units'))
+                else:
+                    data['units'].append('')
+                if hasattr(ncfile.variables[key], 'long_name'):
+                    data['longname'].append(getattr(ncfile.variables[key],
+                                                'long_name'))
+                else:
+                    data['longname'].append(key)
 
-        data['time'] = \
+        data['times'] = \
             tc.epoch_to_datetime(np.array(ncfile.variables['time'])[0])
 
         try:
