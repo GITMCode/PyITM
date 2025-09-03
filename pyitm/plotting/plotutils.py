@@ -26,6 +26,17 @@ def get_min_max_data(allSlices, yPos, \
         maxi = allSlices.max() * 1.01
         mini = allSlices.min() * 0.99
         amaxi = np.abs(allSlices).max() * 1.05
+        # check to see if these values are extreme:
+        stddev = np.std(allSlices)
+        ave = np.mean(allSlices)
+        if (mini < ave - 2*stddev):
+            mini = ave - 2*stddev
+        if (maxi > ave + 2*stddev):
+            print(' --> adjusting old max: ', maxi)
+            maxi = ave + 2*stddev
+            print(' -->           new max: ', maxi)
+        if (amaxi > np.abs(ave) + 2*stddev):
+            amaxi = np.abs(ave) + 2*stddev
         doPlot = True
         mask = None
 
@@ -36,7 +47,15 @@ def get_min_max_data(allSlices, yPos, \
             maxi = allSlices[:, :, mask].max() * 1.01
             mini = allSlices[:, :, mask].min() * 0.99
             amaxi = np.abs(allSlices[:, :, mask]).max() * 1.05
-    
+            stddev = np.std(allSlices[:, :, mask])
+            ave = np.mean(allSlices[:, :, mask])
+            if (mini < ave - 2*stddev):
+                mini = ave - 2*stddev
+            if (maxi > ave + 2*stddev):
+                maxi = ave + 2*stddev
+            if (amaxi > np.abs(ave) + 2*stddev):
+                amaxi = np.abs(ave) + 2*stddev
+
         else:
             doPlot = False
             mini = -1.0
