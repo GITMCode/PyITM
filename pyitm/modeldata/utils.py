@@ -59,32 +59,40 @@ def calc_if_uniform_grid(lonsWblock2d, latsWblock2d):
 # find cut in altitude, given that the altitude may vary from point to point
 #-----------------------------------------------------------------------------
 
-def find_alt_points_oneblock(allData, goalAlt):
+def find_alts_oneblock(alts3d, goalAlt):
 
-    nLons = allData['nlons']
-    nLats = allData['nlats']
-    nAlts = allData['nalts']
+    nLons, nLats, nAlts = np.shape(alts3d)
 
     iAlts = np.zeros((nLons, nLats)).astype('int')
 
-
+    for iLon in range(nLons):
+        for iLat in range(nLats):
+            diff = np.abs(goalAlt - alts3d[iLon, iLat, :])
+            iAlts[iLon, iLat] = np.argmin(diff)
 
     return iAlts
 
 
-def find_alt_points(allData, goalAlt):
+def find_alts(alts, goalAlt, blocks = False):
 
-    nLons = allData['nlons']
-    nLats = allData['nlats']
-    nAlts = allData['nalts']
-    nBlocks = allData['nblocks']
+    sizes = np.shape(alts)
+    nDims = len(sizes)
 
-    #if (nBlocks > 0):
-        
+    if (nDims == 3):
+        iAlts = find_alts_oneblock(alts, goalAlt)
+        nBlocks = 0
+    elif (nDims == 4):
+        nBlocks, nLons, nLats, nAlts = sizes
+        iAlts = np.zeros((nBlocks, nLons, nLats)).astype('int')
+    else:
+        print('Dont understand dimensions of alts in find_alts')
+        iAlt = -1
+        return iAlt
 
-    return 
+    for iBlock in range(nBlocks):
+        iAlts[iBlock, :, :] = find_alts_oneblock(alts[iBlock, :, :, :], goalAlt)
 
-
+    return iAlts
 
 #-----------------------------------------------------------------------------
 # find which cut direction to make, then extract a bunch of information
@@ -163,6 +171,39 @@ def find_cut(args, allData):
     return cut
 
 # ----------------------------------------------------------------------------
+# This takes a 3D array (lon, lat, alt) and returns a (lon, lat), where
+# the altitude is (lon, lat) dependent
+# ----------------------------------------------------------------------------
+
+def slice_alt_with_array(var3d, iAlt):
+
+    nLons, nLats, nAlts = np.shape(var3d)
+    slice2d = np.zeros((nLons, nLats))
+
+    for iLon in range(nLons):
+        for iLat in range(nLats):
+            iAlt_ = iAlt[iLon, iLat]
+            slice2d[iLon, iLat] = var3d[iLon, iLat, iAlt_]
+    return slice2d
+
+# ----------------------------------------------------------------------------
+# This takes a 3D array (lon, lat, alt) and returns a (lon, lat), where
+# the altitude is (lon, lat) dependent
+# ----------------------------------------------------------------------------
+
+def slice_alt_with_array_block(var4d, iAlt):
+
+    nBlocks, nLons, nLats, nAlts = np.shape(var4d)
+    slice3d = np.zeros((nBlocks, nLons, nLats))
+
+    for iBlock in range(nBlocks):
+        for iLon in range(nLons):
+            for iLat in range(nLats):
+                iAlt_ = iAlt[iBlock, iLon, iLat]
+                slice3d[iBlock, iLon, iLat] = var4d[iBlock, iLon, iLat, iAlt_]
+    return slice3d
+
+# ----------------------------------------------------------------------------
 # take a dictionary containing all of the model data and
 # return slices. The data should have the shape:
 # [nTimes, nVars, nLons, nLats, nAlts]
@@ -179,17 +220,45 @@ def data_slice(allData3D, iLon = -1, iLat = -1, iAlt = -1):
     nAlts = allData3D['nalts']
     nBlocks = allData3D['nblocks']
 
-    if ((nBlocks > 0) and (iAlt < 0)):
-        print('data_slice with multiple blocks on works with a alt slice!')
-    
-    if (nVars > 1):
+    doAltCut = False
+    altArray = False
+    if (np.isscalar(iAlt)):
         if (iAlt > -1):
+            doAltCut = True
+    else:
+        doAltCut = True
+        altArray = True
+    
+    # This has become somewhat complicated to handle all of the different cases:
+    # nVars == 1 vs nVars > 1
+    # nBlocks = 0 vs block-based arrays
+    # iAlt = scalar or iAlt is an array - We can now slice with different 
+    #                  iAlts for each lat/lon point
+
+    if (nVars > 1):
+        if (doAltCut):
             if (nBlocks == 0):
                 slices = np.zeros((nTimes, nVars, nLons, nLats))
-                slices[:, :, :, :] = allData3D['data'][:, :, :, :, iAlt]
             else:
                 slices = np.zeros((nTimes, nVars, nBlocks, nLons, nLats))
-                slices[:, :, :, :, : ] = allData3D['data'][:, :, :, :, :, iAlt]
+            if (not altArray):
+                if (nBlocks == 0):
+                    slices[:, :, :, :] = allData3D['data'][:, :, :, :, iAlt]
+                else:
+                    slices[:, :, :, :, : ] = allData3D['data'][:, :, :, :, :, iAlt]
+            else:
+                if (nBlocks == 0):
+                    for iLon in range(nLons):
+                        for iLat in range(nLats):
+                            iAlt_ = iAlt[iLon, iLat]
+                            slices[:, :, iLon, iLat] = allData3D['data'][:, :, iLon, iLat, iAlt_]
+                else:    
+                    for iBlock in range(nBlocks):
+                        for iLon in range(nLons):
+                            for iLat in range(nLats):
+                                iAlt_ = iAlt[iBlock, iLon, iLat]
+                                slices[:, :, iBlock, iLon, iLat] = \
+                                    allData3D['data'][:, :, iBlock, iLon, iLat, iAlt_]
         elif (iLat > -1):
             slices = np.zeros((nTimes, nVars, nLons, nAlts))
             slices[:, :, :, :] = allData3D['data'][:, :, :, iLat, :]
@@ -203,13 +272,27 @@ def data_slice(allData3D, iLon = -1, iLat = -1, iAlt = -1):
                         allData3D['data'][:, :, iLon, :, :]
                 slices[:, :, :, :] = slices[:, :, :, :] / (nLons-4)
     else:
-        if (iAlt > -1):
+        if (doAltCut):
             if (nBlocks == 0):
                 slices = np.zeros((nTimes, nLons, nLats))
-                slices[:, :, :] = allData3D['data'][:, :, :, iAlt]
             else:
                 slices = np.zeros((nTimes, nBlocks, nLons, nLats))
-                slices[:, :, :, :] = allData3D['data'][:, :, :, :, iAlt]
+
+            if (not altArray):
+                if (nBlocks == 0):
+                    slices[:, :, :] = allData3D['data'][:, :, :, iAlt]
+                else:
+                    slices[:, :, :, : ] = allData3D['data'][:, :, :, :, iAlt]
+            else:
+                if (nBlocks == 0):
+                    for iTime in range(nTimes):
+                        slices[iTime, :, :] = \
+                            slice_alt_with_array(allData3D['data'][iTime, :, :, :], iAlt)
+                else:
+                    for iTime in range(nTimes):
+                        slices[iTime, :, :, :] = \
+                            slice_alt_with_array_block(allData3D['data'][iTime, :, :, :], iAlt)
+
         elif (iLat > -1):
             slices = np.zeros((nTimes, nLons, nAlts))
             slices[:, :, :] = allData3D['data'][:, :, iLat, :]
