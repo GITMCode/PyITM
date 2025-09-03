@@ -69,6 +69,7 @@ def get_args():
 
 def plot_sphere(args, allData):
 
+    altGoal = args.alt
     alts1d = allData['alts'][0, 0, :]
     diff = np.abs(alts1d - altGoal)
     iAlt = np.argmin(diff)
@@ -115,10 +116,18 @@ def plot_sphere(args, allData):
 
 def plot_blocks(args, allData):
 
-    alts1d = allData['alts'][0, 0, 0, :]
-    diff = np.abs(alts1d - altGoal)
-    iAlt = np.argmin(diff)
-    realAlt = alts1d[iAlt]
+    isSameAlts = utils.calc_if_same_alts(allData['alts'])
+    altGoal = args.alt
+
+    if (isSameAlts):
+        alts1d = allData['alts'][0, 0, 0, :]
+        diff = np.abs(alts1d - altGoal)
+        iAlt = np.argmin(diff)
+        realAlt = alts1d[iAlt]
+
+    else:
+        iAlt = utils.find_alts(allData['alts'], args.alt, blocks = True)
+        realAlt = args.alt
 
     allSlices = utils.data_slice(allData, iAlt = iAlt)
     varName = allData['longname'][0]
@@ -130,10 +139,14 @@ def plot_blocks(args, allData):
     # get min and max values, plus color table:
     dataMinMax = plotutils.get_min_max_data(allSlices, None, \
                      color = 'red', \
-                     minVal = 1e32, maxVal = -1e32)
+                     minVal = args.mini, maxVal = args.maxi)
     
-    lons3d = allData['lons'][:, :, :, iAlt]
-    lats3d = allData['lats'][:, :, :, iAlt]
+    if (np.isscalar(iAlt)):
+        lons3d = allData['lons'][:, :, :, iAlt]
+        lats3d = allData['lats'][:, :, :, iAlt]
+    else:
+        lons3d = utils.slice_alt_with_array_block(allData['lons'], iAlt)
+        lats3d = utils.slice_alt_with_array_block(allData['lats'], iAlt)
     
     sFilePre = sVarNum + sAltNum
     sTitleAdd = '; Alt: %.0f km' % realAlt
@@ -167,12 +180,6 @@ if __name__ == '__main__':
     if (not allData):
         util.list_file_info(filelist)
         exit()
-
-    altGoal = args.alt
-    
-
-    isSameAlts = utils.calc_if_same_alts(allData['alts'])
-    print('issame = ', isSameAlts)
 
     if (allData['nblocks'] == 0):
         plot_sphere(args, allData)
