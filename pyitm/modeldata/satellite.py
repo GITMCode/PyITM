@@ -239,6 +239,7 @@ def orbit_average(satData, varlist=None, verbose=False):
         iPeriod = int(np.mean(np.diff(iAtNorthPole)))
         tPeriod = np.mean(np.diff(tAtNorthPole))
     except ValueError:
+        # This is mostly for the test cases... May be useful for synthetic data too
         print("Times too short! Cannot orbit average. Sorry.")
         return satData
 
