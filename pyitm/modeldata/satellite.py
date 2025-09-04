@@ -169,8 +169,94 @@ def extract_1d(sat_locations, model_data, extrapolate=False, verbose=False, inte
         if inKey not in wantAlways:
             outData['sat_' + inKey] = np.array(sat_locations[inKey])
 
-    return outData, outTimes
+    return outData
+
+#-----------------------------------------------------------------------------
+# finds the index of the time within a time array 
+#-----------------------------------------------------------------------------
+
+def find_index(time, t):
+
+    if (t < time[0]):
+        return 0
+    if (t > time[-1]):
+        return len(time)-1
+
+    iLow = 0
+    iHigh = len(time)
+    iMid = int((iHigh + iLow)/2)
+    while (iHigh - iLow > 1):
+        if (time[iMid] == t):
+            iHigh = iMid
+            iLow = iMid
+        else:
+            if (t > time[iMid]):
+                iLow = iMid
+            else:
+                iHigh = iMid
+            iMid = int((iHigh + iLow)/2)
+    return iMid
 
 
+def orbit_average(satData, varlist=None, verbose=False):
+    """
+    Attempt to smooth satData using a rolling average over each orbital period
 
+    Inputs
+    ------
+        satData (dict) - satellite data read from satelliteio
+        varlist (list-like) - strings corresponding to keys in satData to smooth.
+            If None, smooth anything with sat_ ot model_ (default=None)
+        verbose (bool=False) - print extra info?
 
+    Returns
+    -------
+        (dict) same as input but has smoothed values of each variable requested
+    
+    """
+
+    # Determine orbital period, look for when sign of lat deriv changes
+    # Could use the stuff in thermo_goce but it's not 'planet-agnostic'
+    signLats = np.sign(np.diff(satData['lats']))
+    
+    iAtNorthPole = []
+    tAtNorthPole = []
+    for i in range(2, len(satData['lats']) - 2):
+        if signLats[i] > signLats[i + 1]:
+            iAtNorthPole.append(i)
+            tAtNorthPole.append(satData['times'][i])
+    try:
+        iPeriod = int(np.mean(np.diff(iAtNorthPole)))
+        tPeriod = np.mean(np.diff(tAtNorthPole))
+    except ValueError:
+        print("Times too short! Cannot orbit average. Sorry.")
+        return satData
+
+    satData['orbital_period'] = tPeriod
+    if verbose: 
+        print(f"Found satellite orbital period of {tPeriod}, or {iPeriod} indices")
+
+    if varlist is None:
+        varlist = []
+        for i in satData.keys():
+            if ('sat_' in i or 'model_' in i) and 'name' not in i:
+                varlist.append(i)
+
+    strs2ignore_smooth = ['flag','arg']
+    for var in varlist:
+        for badvar in strs2ignore_smooth:
+            # If we have a variable we want to ignore...
+            if badvar in var.lower():
+                continue
+
+        if verbose:
+            print("Smoothing ", var)
+        smoothed = np.zeros(len(satData['times']))
+        for i, t in enumerate(satData['times']):
+            iMin = find_index(satData['times'], t-tPeriod/2)
+            iMax = find_index(satData['times'], t+tPeriod/2)
+            s = np.mean(satData[var][iMin : iMax+1])
+            smoothed[i] = s
+        satData['smoothed_' + var] = smoothed
+
+    return satData
