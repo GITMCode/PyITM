@@ -91,7 +91,7 @@ def plot_sphere(args, allData):
     dataMinMax = plotutils.get_min_max_data(allSlices, lats1d, \
                      yMin = args.latmin, yMax = args.latmax, \
                      color = 'red', \
-                     minVal = 1e32, maxVal = -1e32)
+                     minVal = args.mini, maxVal = args.maxi)
 
     sFilePre = sVarNum + sAltNum
     sTitleAdd = '; Alt: %.0f km' % realAlt
@@ -147,7 +147,7 @@ def plot_blocks(args, allData):
     else:
         lons3d = utils.slice_alt_with_array_block(allData['lons'], iAlt)
         lats3d = utils.slice_alt_with_array_block(allData['lats'], iAlt)
-    
+
     sFilePre = sVarNum + sAltNum
     sTitleAdd = '; Alt: %.0f km' % realAlt
     plotters.plot_series_of_slices_wblocks(allSlices,
