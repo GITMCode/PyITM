@@ -62,7 +62,8 @@ def extract_1d(sat_locations, model_data, extrapolate=False, verbose=False, inte
         
         for varname in sat_locations.keys():
             # might not be a numpy array
-            sat_locations[varname] = np.array(sat_locations[varname])[t_ma_sat]
+            if 'name' not in varname:
+                sat_locations[varname] = np.array(sat_locations[varname])[t_ma_sat]
 
     # setup for loop 
     itb4 = 0 # iTime before sat time
@@ -78,10 +79,19 @@ def extract_1d(sat_locations, model_data, extrapolate=False, verbose=False, inte
     if interpVar is None:
         # skip first 3 vars, usually lon,lat,alt
         interpVar = range(3, model_data['nvars'])
-    if isinstance(interpVar, int):
-        interpVar = [interpVar]
 
-    outTimes = []
+    else:
+        # -3's are because we don't want to interp lon, lat, alt
+        try: # interpVar might be strings of ints:
+            interpVar = [int(i)-3 for i in interpVar]
+        except: # or list of strings:
+            interpVar = [i-3 for i in variables.convert_var_to_number(interpVar)]
+
+        # check if we only read in one variable. Reshape model_data if so
+        if len(model_data['data'].shape) == 4:
+            t, x, y, z = model_data['data'].shape
+            model_data['data'] = model_data['data'].reshape((t, 1, x, y, z))
+
     # outData is a dict to simplify lookups.
     outVals = {iVar: [] for iVar in interpVar}
 
