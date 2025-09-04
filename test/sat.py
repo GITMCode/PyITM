@@ -4,6 +4,7 @@ from bin import plot_satellite
 from pyitm.modeldata import satellite
 from pyitm.fileio import gitmio, satelliteio
 import datetime
+import glob
 import numpy as np
 
 dat = gitmio.read_gitm_all_files('data/3DALL_t0212*')
@@ -54,3 +55,9 @@ plot_satellite.main(satfiles=['data/satfiles/CH_DNS_ACC_2002_12_v01.txt'],
                     modeldatapath='data/3DALL_t0212*',
                     vars2plot=3,
                     verbose=True)
+
+newfiles = glob.glob('champ*')
+
+print("-> Looks like I made some new files. You can `rm champ_*` to delete:")
+
+print('>>>>>   ', newfiles)
