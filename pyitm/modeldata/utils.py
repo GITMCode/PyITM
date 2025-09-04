@@ -187,8 +187,8 @@ def slice_alt_with_array(var3d, iAlt):
     return slice2d
 
 # ----------------------------------------------------------------------------
-# This takes a 3D array (lon, lat, alt) and returns a (lon, lat), where
-# the altitude is (lon, lat) dependent
+# This takes a 4D array (block, lon, lat, alt) and returns a
+# (block, lon, lat), where the altitude is (lon, lat) dependent
 # ----------------------------------------------------------------------------
 
 def slice_alt_with_array_block(var4d, iAlt):
@@ -202,6 +202,57 @@ def slice_alt_with_array_block(var4d, iAlt):
                 iAlt_ = iAlt[iBlock, iLon, iLat]
                 slice3d[iBlock, iLon, iLat] = var4d[iBlock, iLon, iLat, iAlt_]
     return slice3d
+
+# ----------------------------------------------------------------------------
+# This takes a 3D array (lon, lat, alt) and returns a (lat, alt) slice
+# if iLon < 0, then it returns a zonal average
+# ----------------------------------------------------------------------------
+
+def slice_lon_3d(var3d, iLon):
+
+    nLons, nLats, nAlts = np.shape(var3d)
+    slice2d = np.zeros((nLats, nAlts))
+
+    if (iLon >= 0):
+        slice2d = var3d[iLon, :, :]
+    else:
+        for iL in range(nLons-4):
+            slice2d = slice2d + \
+                var3d[iLon + 2, :, :]
+        slice2d = slices / (nLons-4)
+
+    return slice2d
+
+# ----------------------------------------------------------------------------
+# This takes a 4D array (n, lon, lat, alt) and returns a (n, lat, alt) slice
+# ----------------------------------------------------------------------------
+
+def slice_lon_4d(var4d, iLon):
+
+    nVals, nLons, nLats, nAlts = np.shape(var4d)
+    slice3d = np.zeros((nVals, nLats, nAlts))
+
+    for iVal in range(nVals):
+        slice3d[iVal, :, :] = slice_lon_3d(var4d[iVal, :, :, :], iLon)
+    
+    return slice3d
+
+# ----------------------------------------------------------------------------
+# This takes a 5D array (n1, n2, lon, lat, alt) and returns a
+# (n1, n2, lat, alt) slice
+#  - if iLon < 0, then returns zonal average
+# ----------------------------------------------------------------------------
+
+def slice_lon_5d(var5d, iLon):
+
+    nVal1, nVal2, nLons, nLats, nAlts = np.shape(var5d)
+    slice4d = np.zeros((nVal1, nVal2, nLats, nAlts))
+
+    for iVal1 in range(nVal1):
+        for iVal2 in range(nVal2):
+            slice4d[iVal1, iVal2, :, :] = slice_lon_3d(var5d[iVal1, iVal2, :, :, :], iLon)
+    
+    return slice4d
 
 # ----------------------------------------------------------------------------
 # take a dictionary containing all of the model data and
@@ -220,6 +271,8 @@ def data_slice(allData3D, iLon = -1, iLat = -1, iAlt = -1):
     nAlts = allData3D['nalts']
     nBlocks = allData3D['nblocks']
 
+    print(nTimes, nVars, nBlocks, nLons, nLats, nAlts)
+    
     doAltCut = False
     altArray = False
     if (np.isscalar(iAlt)):
@@ -297,15 +350,10 @@ def data_slice(allData3D, iLon = -1, iLat = -1, iAlt = -1):
             slices = np.zeros((nTimes, nLons, nAlts))
             slices[:, :, :] = allData3D['data'][:, :, iLat, :]
         else:
-            slices = np.zeros((nTimes, nLats, nAlts))
-            if (iLon > 0):
-                slices[:, :, :] = allData3D['data'][:, iLon, :, :]
+            if (nBlocks == 0):
+                slices = slice_lon_4d(allData3D['data'], iLon)
             else:
-                for iL in range(nLons-4):
-                    print('ilon : ', iL)
-                    slices[:, :, :] = slices[:, :, :] + \
-                        allData3D['data'][:, iLon + 2, :, :]
-                slices = slices / (nLons-4)
+                slices = slice_lon_5d(allData3D['data'], iLon)
 
     return slices
 
