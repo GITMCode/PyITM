@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import numpy as np
-import pandas as pd # for dealing with numpy vs python datetimes. first lines of extract_1d
 from pyitm.fileio import variables
 
 def extract_1d(sat_locations, model_data, extrapolate=False, verbose=False, interpVar=None):
@@ -29,17 +28,17 @@ def extract_1d(sat_locations, model_data, extrapolate=False, verbose=False, inte
 
     """
 
-    sat_locations['time'] = pd.to_datetime(sat_locations['time'])
-    model_data['time'] = pd.to_datetime(model_data['time'])
+    sat_locations['times'] = np.array(sat_locations['times'])
+    model_data['time'] = np.array(model_data['times'])
 
-    t_min = max(min(sat_locations['time']), min(model_data['time']))
-    t_max = min(max(sat_locations['time']), max(model_data['time']))
+    t_min = max(min(sat_locations['times']), min(model_data['times']))
+    t_max = min(max(sat_locations['times']), max(model_data['times']))
 
     timesliceModel = False
     timesliceSat = False
-    if min(model_data['time']) < t_min or max(model_data['time']) > t_max:
+    if min(model_data['times']) < t_min or max(model_data['times']) > t_max:
         timesliceModel = True
-    if min(sat_locations['time']) < t_min or max(sat_locations['time']) > t_max:
+    if min(sat_locations['times']) < t_min or max(sat_locations['times']) > t_max:
         timesliceSat = True
 
     if verbose:
@@ -49,23 +48,28 @@ def extract_1d(sat_locations, model_data, extrapolate=False, verbose=False, inte
     if timesliceModel:
         t_ma_model = np.where((model_data['time'] >= t_min)
                              & (model_data['time'] <= t_max))[0]
-        for varname in model_data.keys():
-            # hopefully already a numpy array...
-            model_data[varname] = model_data[varname][t_ma_model, ...]
+        if len(t_ma_model) == 0:
+            raise ValueError("None of the satellite data and model outputs overlap!!")
+        
+        model_data['data'] = model_data['data'][t_ma_model, ...]
+        model_data['times'] = np.array(model_data['times'])[t_ma_model]
         
     if timesliceSat:
-        t_ma_sat = np.where((sat_locations['time'] >= t_min) 
-                               & (sat_locations['time'] <= t_max))
-        print(t_ma_sat)
+        t_ma_sat = np.where((sat_locations['times'] >= t_min) 
+                            & (sat_locations['times'] < t_max))[0]
+        if len(t_ma_sat) == 0:
+            raise ValueError("None of the satellite data and model outputs overlap!!")
+        
         for varname in sat_locations.keys():
             # might not be a numpy array
             sat_locations[varname] = np.array(sat_locations[varname])[t_ma_sat]
 
     # setup for loop 
     itb4 = 0 # iTime before sat time
-    lons = np.rad2deg(np.unique(model_data['data'][0, 0, :,0,0]))
-    lats = np.rad2deg(np.unique(model_data['data'][0, 1, 0,:,0]))
-    alts = model_data['data'][0, 2, 0, 0, :]/1000.0
+
+    lons = np.rad2deg(np.unique(model_data['lons']))
+    lats = np.rad2deg(np.unique(model_data['lats']))
+    alts = np.unique(model_data['alts'])
 
     dLon = lons[1] - lons[0]
     dLat = lats[1] - lats[0]
@@ -81,77 +85,89 @@ def extract_1d(sat_locations, model_data, extrapolate=False, verbose=False, inte
     # outData is a dict to simplify lookups.
     outVals = {iVar: [] for iVar in interpVar}
 
-    for i, time in enumerate(sat_locations['time']):
+    for i, time in enumerate(sat_locations['times']):
         
-        if model_data['time'][itb4 + 1] < time:
+        if model_data['times'][itb4 + 1] < time:
             itb4 += 1
+            if itb4+1 == len(model_data['times']):
+                itb4 -= 1
 
         if verbose:
-            print(f"->> in loop. sat time: {time}, gitmtimes: {model_data['time'][itb4]},{model_data['time'][itb4+1]}")
+            print(f"->> in loop. sat time: {time}, gitmtimes: {model_data['times'][itb4]},"
+                  f"{model_data['times'][itb4+1]}")
         
-        dt = (model_data["time"][itb4] - \
-            model_data["time"][itb4 + 1]).total_seconds()
-        xt = (time - model_data["time"][itb4]).total_seconds() / dt
+        dt = (model_data["times"][itb4] - \
+            model_data["times"][itb4 + 1]).total_seconds()
+        xt = (time - model_data["times"][itb4]).total_seconds() / dt
 
-        xLon = (sat_locations['lon'][i] - lons[0])/dLon
+        xLon = (sat_locations['lons'][i] - lons[0])/dLon
         iLon = int(xLon)
         xLon = xLon - iLon
         
-        yLat = (sat_locations['lat'][i] - lats[0])/dLat
+        yLat = (sat_locations['lats'][i] - lats[0])/dLat
         jLat = int(yLat)
         yLat = yLat - jLat
 
         kAlt = 0
         zAlt = 0.0
-        if ((sat_locations['alt'][i] > alts[0]) and (nAlts > 1)):
-            if (sat_locations['alt'][i] > alts[nAlts-1]):
-                # above domain:
-                kAlt = nAlts-2
-                zAlt = 1.0
+        if ((sat_locations['alts'][i] > alts[0]) and (nAlts > 1)):
+            if (sat_locations['alts'][i] > alts[nAlts-1]):
+                if extrapolate:
+                    # above domain:
+                    kAlt = nAlts-2
+                    zAlt = 1.0
+                else:
+                    raise ValueError("Above model altitude domain!")
             else:
-                while (alts[kAlt] < sat_locations['alt'][i]):
+                while (alts[kAlt] < sat_locations['alts'][i]):
                     kAlt = kAlt + 1
                 kAlt = kAlt - 1
-                zAlt = (sat_locations['alt'][i] - alts[kAlt]) / (alts[kAlt+1] - alts[kAlt])
+                zAlt = (sat_locations['alts'][i] - alts[kAlt]) / (alts[kAlt+1] - alts[kAlt])
             kAltp1 = kAlt + 1
         else:
             kAltp1 = kAlt
 
         for iVar in interpVar:
             BeforeVal = \
-                (1-xLon)*(1-yLat)*(1-zAlt)*model_data['data'][itb4, iVar, iLon, jLat, kAlt]+\
-                (  xLon)*(1-yLat)*(1-zAlt)*model_data['data'][itb4, iVar, iLon+1, jLat, kAlt]+\
-                (1-xLon)*(  yLat)*(1-zAlt)*model_data['data'][itb4, iVar, iLon, jLat+1, kAlt]+\
+                (1-xLon)*(1-yLat)*(1-zAlt)*model_data['data'][itb4, iVar, iLon,   jLat,   kAlt]+\
+                (  xLon)*(1-yLat)*(1-zAlt)*model_data['data'][itb4, iVar, iLon+1, jLat,   kAlt]+\
+                (1-xLon)*(  yLat)*(1-zAlt)*model_data['data'][itb4, iVar, iLon,   jLat+1, kAlt]+\
                 (  xLon)*(  yLat)*(1-zAlt)*model_data['data'][itb4, iVar, iLon+1, jLat+1, kAlt]+\
-                (1-xLon)*(1-yLat)*(  zAlt)*model_data['data'][itb4, iVar, iLon, jLat, kAltp1]+\
-                (  xLon)*(1-yLat)*(  zAlt)*model_data['data'][itb4, iVar, iLon+1, jLat, kAltp1]+\
-                (1-xLon)*(  yLat)*(  zAlt)*model_data['data'][itb4, iVar, iLon, jLat+1, kAltp1]+\
+                (1-xLon)*(1-yLat)*(  zAlt)*model_data['data'][itb4, iVar, iLon,   jLat,   kAltp1]+\
+                (  xLon)*(1-yLat)*(  zAlt)*model_data['data'][itb4, iVar, iLon+1, jLat,   kAltp1]+\
+                (1-xLon)*(  yLat)*(  zAlt)*model_data['data'][itb4, iVar, iLon,   jLat+1, kAltp1]+\
                 (  xLon)*(  yLat)*(  zAlt)*model_data['data'][itb4, iVar, iLon+1, jLat+1, kAltp1]
             
             AfterVal = \
-                (1-xLon)*(1-yLat)*(1-zAlt)*model_data['data'][itb4+1, iVar, iLon, jLat, kAlt]+\
-                (  xLon)*(1-yLat)*(1-zAlt)*model_data['data'][itb4+1, iVar, iLon+1, jLat, kAlt]+\
-                (1-xLon)*(  yLat)*(1-zAlt)*model_data['data'][itb4+1, iVar, iLon, jLat+1, kAlt]+\
+                (1-xLon)*(1-yLat)*(1-zAlt)*model_data['data'][itb4+1, iVar, iLon,   jLat,   kAlt]+\
+                (  xLon)*(1-yLat)*(1-zAlt)*model_data['data'][itb4+1, iVar, iLon+1, jLat,   kAlt]+\
+                (1-xLon)*(  yLat)*(1-zAlt)*model_data['data'][itb4+1, iVar, iLon,   jLat+1, kAlt]+\
                 (  xLon)*(  yLat)*(1-zAlt)*model_data['data'][itb4+1, iVar, iLon+1, jLat+1, kAlt]+\
-                (1-xLon)*(1-yLat)*(  zAlt)*model_data['data'][itb4+1, iVar, iLon, jLat, kAltp1]+\
-                (  xLon)*(1-yLat)*(  zAlt)*model_data['data'][itb4+1, iVar, iLon+1, jLat, kAltp1]+\
-                (1-xLon)*(  yLat)*(  zAlt)*model_data['data'][itb4+1, iVar, iLon, jLat+1, kAltp1]+\
+                (1-xLon)*(1-yLat)*(  zAlt)*model_data['data'][itb4+1, iVar, iLon,   jLat,   kAltp1]+\
+                (  xLon)*(1-yLat)*(  zAlt)*model_data['data'][itb4+1, iVar, iLon+1, jLat,   kAltp1]+\
+                (1-xLon)*(  yLat)*(  zAlt)*model_data['data'][itb4+1, iVar, iLon,   jLat+1, kAltp1]+\
                 (  xLon)*(  yLat)*(  zAlt)*model_data['data'][itb4+1, iVar, iLon+1, jLat+1, kAltp1]
 
             outVals[iVar].append((1-xt) * BeforeVal + xt * AfterVal)
 
-        outTimes.append(time)
-
     # make & fill output dictionary:
-    outData = {'time': np.array(outTimes)}
+    outData = {}
 
+    # First, a list of some expected data that we want. some may exist, some may not.
+    wantAlways = ['times', 'lons', 'lats', 'alts', 'lst', 'sat_name']
+    for key in wantAlways:
+        if key in sat_locations.keys():
+            outData[key] = sat_locations[key]
+
+    # Put any interpolated outputs into the file!
     for iVar in interpVar:
-        outData[variables.get_short_names(model_data['vars'][iVar])[0]] = np.array(outVals[iVar])
+        dat_name = 'model_' + variables.get_short_names(model_data['vars'][iVar])[0]
+        outData[dat_name] = np.array(outVals[iVar])
     
-    # in case any other data was present in original satellite file
+    # This adds density, wind, flags, etc. present in original satellite file
     for inKey in sat_locations.keys():
-        if inKey != time:
-            outData[inKey] = np.array(sat_locations[inKey])
+        if inKey not in wantAlways:
+            outData['sat_' + inKey] = np.array(sat_locations[inKey])
 
     return outData, outTimes
 
