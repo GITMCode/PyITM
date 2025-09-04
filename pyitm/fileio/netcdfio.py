@@ -258,7 +258,6 @@ def read_netcdf_all_files(filelist, varlist=[-1], verbose=False):
         alts = spatialData['z'] / 1000.0  # Convert from m to km
         nAlts = len(alts[0, 0, 0, :])
         nBlocks = len(lons[:, 0, 0, 0])
-        print('block file! ', nBlocks)
         
         if (nVars == 1):
             allData = np.zeros((nTimes, nBlocks, nLons, nLats, nAlts))
@@ -267,7 +266,7 @@ def read_netcdf_all_files(filelist, varlist=[-1], verbose=False):
 
     for iTime, filename in enumerate(filelist):
         data = read_netcdf_one_file(filename, varlist, verbose=verbose)
-        allTimes.append(data["time"])
+        allTimes.append(data["times"])
         for iVar, var in enumerate(varlist):
             if (nBlocks == 0):
                 if (nVars == 1):
