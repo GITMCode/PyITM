@@ -48,3 +48,9 @@ plot_satellite.main(satfiles=['data/satfiles/CH_DNS_ACC_2002_12_v01.txt'],
                     modeldatapath='data/3DALL_t0212*',
                     vars2plot='rho',
                     verbose=True)
+
+
+plot_satellite.main(satfiles=['data/satfiles/CH_DNS_ACC_2002_12_v01.txt'],
+                    modeldatapath='data/3DALL_t0212*',
+                    vars2plot=3,
+                    verbose=True)
