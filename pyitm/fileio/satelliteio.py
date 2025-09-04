@@ -147,6 +147,114 @@ def _read_champ(file):
 
     return data
 
+def _read_grace(file):
+    """
+    Read a GRACE/GRACE-FO file
+
+    Inputs
+    ------
+        file (str) - Path to GRACE file
+
+    Returns
+    -------
+        (dict) - GRACE data
+    
+    """
+    
+    data = {}
+    data["times"] = []
+    data["alts"] = []
+    data["lats"] = []
+    data["lons"] = []
+    data["lst"] = []
+    data["arglat"] = []
+    data["density_mean"] = []
+    data["density_flag"] = []
+    data["density_mean_flag"] = []
+
+    f = open(file, 'r')
+
+    for line in f:
+
+        if (line.find('#') < 0):
+            items = line.split()
+            ymd = items[0].split('-')
+            hms = items[1].split(':')
+            s = float(hms[2])
+            data["times"].append(datetime(int(ymd[0]),int(ymd[1]),int(ymd[2]),
+                                         int(hms[0]),int(hms[1]),int(s)))
+            data["alts"].append(float(items[4])/1000.0)
+            data["lons"].append( (float(items[5])+360.0) % 360.0 )
+            data["lats"].append(float(items[6]))
+            data["lst"].append(float(items[7]))
+            data["arglat"].append(float(items[8]))
+            data["density"].append(float(items[9]))
+            data["density_mean"].append(float(items[10]))
+            data["density_flag"].append(float(items[11]))
+            data["density_mean_flag"].append(float(items[12]))
+
+    f.close()
+
+    return data
+
+
+def _read_grace_winds(file):
+    """
+    Read a GRACE/GRACE-FO (wind) file
+
+    Inputs
+    ------
+        file (str) - Path to GRACE file
+
+    Returns
+    -------
+        (dict) - GRACE data. 
+            - crosswind_speed is the magnitude
+            - Uv is unit vector in each of the 3 directions
+    
+    """
+    
+    data = {}
+    data["times"] = []
+    data["alts"] = []
+    data["lats"] = []
+    data["lons"] = []
+    data["lst"] = []
+    data["arglat"] = []
+    data["crosswind_speed"] = []
+    data["uVnorth"] = []
+    data["uVeast"] = []
+    data["uVdown"] = []
+    data["validity_flag"] = []
+
+    f = open(file, 'r')
+
+    for line in f:
+
+        if (line.find('#') < 0):
+            items = line.split()
+            ymd = items[0].split('-')
+            hms = items[1].split(':')
+            s = float(hms[2])
+            data["times"].append(datetime(int(ymd[0]),int(ymd[1]),int(ymd[2]),
+                                         int(hms[0]),int(hms[1]),int(s)))
+            data["alts"].append(float(items[4])/1000.0)
+            data["lons"].append( (float(items[5])+360.0) % 360.0 )
+            data["lats"].append(float(items[6]))
+            data["lst"].append(float(items[7]))
+            data["arglat"].append(float(items[8]))
+            data["crosswind_speed"].append(float(items[9]))
+            data["uVnorth"].append(float(items[10]))
+            data["uVeast"].append(float(items[11]))
+            data["uVdown"].append(float(items[12]))
+            data["validity_flag"].append(float(items[12]))
+
+    f.close()
+
+    return data
+
+
+
 
 def _read_champ_winds(file):
     """
@@ -236,13 +344,16 @@ def read_sat_file(filename:str, satname=None, verbose=False):
     # To add a new reader, define it then modify satreaders & satlookup
 
     # The satellite name & the function used to call it
-    satreaders = {#'grace': _read_grace,
+    satreaders = {'grace_density': _read_grace,
+                  'grace_wind': _read_grace_winds,
                   'goce': _read_goce,
                   'champ': _read_champ}
     # satellite name & patterns that should be checked against filename
     satlookup = {'goce': ['go'],
                  'champ': ['ch'],
-                 'grace': ['gr', 'ga', 'gb', 'gc']}
+                 'grace_density': ['gr_dns', 'ga_dns', 'gb_dns', 'gc_dns'],
+                 'grace_wind': ['gr_wnd', 'ga_wnd', 'gb_wnd', 'gc_wnd'],
+                 }
 
     if satname is None:
         # Infer satellite name
