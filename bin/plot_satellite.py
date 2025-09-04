@@ -131,8 +131,8 @@ def write_out_data(satDataDict, savepath, verbose=False):
     print('--> Saving Data file as: ' + savename)
     with open(savename, 'w') as f:
         # Header
-        f.write(f"# Satellite name: {satDataDict.pop('sat_name')}\n")
-        f.write(f"# Orbital Period: {satDataDict.pop('orbital_period')}\n")
+        f.write(f"# Satellite name: {satDataDict.pop('sat_name', None)}\n")
+        f.write(f"# Orbital Period: {satDataDict.pop('orbital_period', None)}\n")
         f.write("\n")
 
         # First line
