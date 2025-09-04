@@ -82,10 +82,13 @@ def extract_1d(sat_locations, model_data, extrapolate=False, verbose=False, inte
 
     else:
         # -3's are because we don't want to interp lon, lat, alt
-        try: # interpVar might be strings of ints:
+        try:
+            if isinstance(interpVar, int): #single int
+                interpVar = [interpVar]
+            else: # list of strings? (will error if not)
+                interpVar = [i-3 for i in variables.convert_var_to_number(interpVar)]
+        except AttributeError: # or list of ints?
             interpVar = [int(i)-3 for i in interpVar]
-        except: # or list of strings:
-            interpVar = [i-3 for i in variables.convert_var_to_number(interpVar)]
 
         # check if we only read in one variable. Reshape model_data if so
         if len(model_data['data'].shape) == 4:
