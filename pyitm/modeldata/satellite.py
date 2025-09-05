@@ -239,8 +239,8 @@ def orbit_average(satData, varlist=None, verbose=False):
             iAtNorthPole.append(i)
             tAtNorthPole.append(satData['times'][i])
     try:
-        iPeriod = int(np.mean(np.diff(iAtNorthPole)))
-        tPeriod = np.mean(np.diff(tAtNorthPole))
+        iPeriod = int(np.round(np.median(np.diff(iAtNorthPole))))
+        tPeriod = np.median(np.diff(tAtNorthPole))
     except ValueError:
         # This is mostly for the test cases... May be useful for synthetic data too
         print("Times too short! Cannot orbit average. Sorry.")
