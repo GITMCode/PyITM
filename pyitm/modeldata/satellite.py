@@ -68,9 +68,9 @@ def extract_1d(sat_locations, model_data, extrapolate=False, verbose=False, inte
     # setup for loop 
     itb4 = 0 # iTime before sat time
 
-    lons = np.rad2deg(np.unique(model_data['lons']))
-    lats = np.rad2deg(np.unique(model_data['lats']))
-    alts = np.unique(model_data['alts'])
+    lons = np.sort(np.unique(model_data['lons']))
+    lats = np.sort(np.unique(model_data['lats']))
+    alts = np.sort(np.unique(model_data['alts']))
 
     dLon = lons[1] - lons[0]
     dLat = lats[1] - lats[0]
