@@ -100,7 +100,7 @@ def extract_1d(sat_locations, model_data, extrapolate=False, verbose=False, inte
 
     for i, time in enumerate(sat_locations['times']):
         
-        if model_data['times'][itb4 + 1] < time:
+        if model_data['times'][itb4 + 1] <= time:
             itb4 += 1
             if itb4+1 == len(model_data['times']):
                 itb4 -= 1
@@ -110,7 +110,7 @@ def extract_1d(sat_locations, model_data, extrapolate=False, verbose=False, inte
                   f"{model_data['times'][itb4+1]}")
         
         dt = (model_data["times"][itb4] - \
-            model_data["times"][itb4 + 1]).total_seconds()
+              model_data["times"][itb4 + 1]).total_seconds()
         xt = (time - model_data["times"][itb4]).total_seconds() / dt
 
         xLon = (sat_locations['lons'][i] - lons[0])/dLon

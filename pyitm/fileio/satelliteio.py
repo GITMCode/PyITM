@@ -51,11 +51,11 @@ def _read_goce(file):
     data["lats"] = []
     data["lons"] = []
     data["lst"] = []
-    data["density"] = []
+    data["rho"] = []
     data["Ve"] = []
     data["Vn"] = []
-    data["Vr"] = []
-    data["densityError"] = []
+    data["Vv"] = []
+    data["rhoError"] = []
     data["windError"] = []
     data["FlagOver"] = []
     data["FlagEclipse"] = []
@@ -77,11 +77,11 @@ def _read_goce(file):
             data["lons"].append(float(items[4]))
             data["lats"].append(float(items[5]))
             data["lst"].append(float(items[6]))
-            data["density"].append(float(items[8]))
+            data["rho"].append(float(items[8]))
             data["Ve"].append(float(items[9]))
             data["Vn"].append(float(items[10]))
-            data["Vr"].append(float(items[11]))
-            data["densityError"].append(float(items[12]))
+            data["Vv"].append(float(items[11]))
+            data["rhoError"].append(float(items[12]))
             data["windError"].append(float(items[13]))
             data["FlagOver"].append(int(items[14]))
             data["FlagEclipse"].append(int(items[15]))
@@ -124,7 +124,7 @@ def _read_champ(file):
     data["lats"] = []
     data["lons"] = []
     data["lst"] = []
-    data["density"] = []
+    data["rho"] = []
 
     f = open(file, 'r')
 
@@ -141,7 +141,7 @@ def _read_champ(file):
             data["lons"].append( (float(items[4])+360.0) % 360.0 )
             data["lats"].append(float(items[5]))
             data["lst"].append(float(items[6]))
-            data["density"].append(float(items[8]))
+            data["rho"].append(float(items[8]))
 
     f.close()
 
@@ -168,9 +168,10 @@ def _read_grace(file):
     data["lons"] = []
     data["lst"] = []
     data["arglat"] = []
-    data["density_mean"] = []
-    data["density_flag"] = []
-    data["density_mean_flag"] = []
+    data["rho"] = []
+    data["rho_mean"] = []
+    data["rho_flag"] = []
+    data["rho_mean_flag"] = []
 
     f = open(file, 'r')
 
@@ -188,10 +189,10 @@ def _read_grace(file):
             data["lats"].append(float(items[6]))
             data["lst"].append(float(items[7]))
             data["arglat"].append(float(items[8]))
-            data["density"].append(float(items[9]))
-            data["density_mean"].append(float(items[10]))
-            data["density_flag"].append(float(items[11]))
-            data["density_mean_flag"].append(float(items[12]))
+            data["rho"].append(float(items[9]))
+            data["rho_mean"].append(float(items[10]))
+            data["rho_flag"].append(float(items[11]))
+            data["rho_mean_flag"].append(float(items[12]))
 
     f.close()
 
@@ -209,8 +210,9 @@ def _read_grace_winds(file):
     Returns
     -------
         (dict) - GRACE data. 
-            - crosswind_speed is the magnitude
-            - Uv is unit vector in each of the 3 directions
+            - V_mag is the magnitude
+            - Vn/Ve/Vv=V_north/east/vertical: velocity in each of the 3 corss-track
+            directions
     
     """
     
@@ -221,10 +223,10 @@ def _read_grace_winds(file):
     data["lons"] = []
     data["lst"] = []
     data["arglat"] = []
-    data["crosswind_speed"] = []
-    data["uVnorth"] = []
-    data["uVeast"] = []
-    data["uVdown"] = []
+    data["V_mag"] = []
+    data["Vn"] = []
+    data["Ve"] = []
+    data["Vv"] = []
     data["validity_flag"] = []
 
     f = open(file, 'r')
@@ -243,13 +245,17 @@ def _read_grace_winds(file):
             data["lats"].append(float(items[6]))
             data["lst"].append(float(items[7]))
             data["arglat"].append(float(items[8]))
-            data["crosswind_speed"].append(float(items[9]))
-            data["uVnorth"].append(float(items[10]))
-            data["uVeast"].append(float(items[11]))
-            data["uVdown"].append(float(items[12]))
+            data["V_mag"].append(float(items[9]))
+            data["Vn"].append(float(items[10]))
+            data["Ve"].append(float(items[11]))
+            data["Vv"].append(float(items[12]))
             data["validity_flag"].append(float(items[12]))
 
     f.close()
+
+    data['Vn'] = np.array(data['Vn']) * np.array(data['V_mag'])
+    data['Ve'] = np.array(data['Ve']) * np.array(data['V_mag'])
+    data['Vv'] = np.array(data['Vv']) * np.array(data['V_mag'])
 
     return data
 
@@ -278,8 +284,8 @@ def _read_champ_winds(file):
     data["lst"] = []
     data["Ve"] = []
     data["Vn"] = []
-    data["Vr"] = []
-    data["density"] = []
+    data["Vv"] = []
+    data["quality_flag"] = []
 
     f = open(file, 'r')
 
@@ -298,6 +304,8 @@ def _read_champ_winds(file):
             data["lst"].append(float(items[6]))
             data["Ve"].append(float(items[8]))
             data["Vn"].append(float(items[9]))
+            data["Vv"].append(float(items[10]))
+            data["quality_flag"].append(float(items[12]))
 
     f.close()
 
