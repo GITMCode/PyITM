@@ -220,7 +220,7 @@ def read_netcdf_all_files(filelist, varlist=[-1], verbose=False):
                          "function.\n\tProvided: " + str(prefixes))
 
     # first read in spatial information:
-    vars = ['lon', 'lat', 'z']
+    vars = ['lon', 'Longitude', 'lat', 'Latitude', 'z', 'Altitude']
     spatialData = read_netcdf_one_file(filelist[0], vars, verbose=False)
 
     nTimes = len(filelist)
@@ -233,13 +233,14 @@ def read_netcdf_all_files(filelist, varlist=[-1], verbose=False):
 
     allTimes = []
     if (spatialData['nblocks'] == 0):
-    
-        lons = spatialData['lon']  
-        nLons = len(lons[:, 0, 0])
-        lats = spatialData['lat']
-        nLats = len(lats[0, :, 0])
-        alts = spatialData['z'] / 1000.0  # Convert from m to km
-        nAlts = len(alts[0, 0, :])
+        # This assumes we have 3D arrays for the coord info.
+        # GITM will put 1D arrays into lon/lat/z if it can, which we don't want.   
+        lons = spatialData['Longitude' if 'Longitude' in spatialData.keys() else 'lon']
+        nLons = len(lons[0, :, 0, 0])
+        lats = spatialData['Latitude' if 'Latitude' in spatialData.keys() else 'lat']
+        nLats = len(lats[0, 0, :, 0])
+        alts = spatialData['Altitude' if 'Altitude' in spatialData.keys() else 'z'] / 1000.0  # Convert from m to km
+        nAlts = len(alts[0, 0, 0, :])
         nBlocks = 0
         
         if (nVars == 1):
