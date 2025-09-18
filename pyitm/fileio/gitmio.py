@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-import os
+import os, glob
 from datetime import datetime
 from struct import unpack
 import numpy as np
@@ -307,3 +307,70 @@ def read_gitm_all_files(filelist, varlist=[-1], verbose=False):
     if verbose:
         print('data keys : ', data.keys())
     return data
+
+#-----------------------------------------------------------------------------
+
+def read_logfile(logfile=None, datadir=None, verbose=False):
+    """ Read GITM logfile to a dictionary. Either datapath or logfile must be provided.
+    
+    Parameters
+    ----------
+    logfile: (str/path) - path to logfile to read. Default None.
+    datadir: (str/path) - path to GITM data directory. Default None.
+    verbose: (bool) - print extra info when running? Default = False
+    
+    Returns
+    -------
+    logdata: (dict) - dictionary containing logfile information
+
+    Notes
+    -----
+    - If datadir is provided, will look for the most recent logfile in that directory.
+    - This should be the directory in which model outputs are stored.
+    """
+
+    if datadir: # Grab the most highest numbered logfile
+        #TODO: Read & appead all logfiles
+        if logfile:
+            print("Both logfile and datadir provided. Ignoring logfile and using datadir.")
+        logfile = sorted(glob.glob(os.path.join(datadir, 'log*.dat')))[-1]
+
+    if not os.path.exists(logfile):
+        raise FileNotFoundError(f"Could not find logfile: {logfile}")
+    elif verbose:
+        print(f"Reading logfile: {logfile}")
+
+    logdata = {}
+
+    saving = False
+    with open(logfile, 'r') as f:
+        for n, line in enumerate(f.readlines()):
+            if saving:
+                # first line (after #START) has the headers
+                if len(logdata.keys()) == 0:
+                    for col in line.strip().split():
+                        logdata[col] = []
+                    if verbose:
+                        print(f"  -> Reading columns: {list(logdata.keys())}")
+                else:
+                    # Read in the data
+                    for col, val in zip(logdata.keys(), line.strip().split()):
+                        logdata[col].append(val)
+
+            if line.startswith('#START'):
+                saving=True
+                if verbose:
+                    print(f"  -> Found start of data at line {n}")
+
+    if verbose:
+        print(f"  -> Read {len(logdata[list(logdata.keys())[0]])} lines of data")
+
+    for col in logdata.keys():
+        try:
+            logdata[col] = np.array(logdata[col], dtype=float)
+        except:
+            if verbose:
+                print(f"  -> Could not convert column '{col}' to float. Leaving as string.")
+            pass
+
+    return logdata
