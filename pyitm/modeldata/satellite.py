@@ -72,6 +72,11 @@ def extract_1d(sat_locations, model_data, extrapolate=False, verbose=False, inte
     lats = np.sort(np.unique(model_data['lats']))
     alts = np.sort(np.unique(model_data['alts']))
 
+    if all(np.abs(lons) < 7):
+        lons = np.rad2deg(lons)
+    if all(np.abs(lats) < 7):
+        lats = np.rad2deg(lats)
+
     dLon = lons[1] - lons[0]
     dLat = lats[1] - lats[0]
     nAlts = len(alts)
