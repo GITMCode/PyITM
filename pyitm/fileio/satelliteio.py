@@ -63,14 +63,17 @@ def _read_goce(file):
     data["FlagThuster"] = []
 
     f = open(file, 'r')
-
-    for line in f:
+    badlines = []
+    for n, line in enumerate(f):
 
         if (line.find('#') < 0):
             items = line.split()
             ymd = items[0].split('-')
             hms = items[1].split(':')
             s = float(hms[2])
+            if len(items) != 18:
+                badlines.append(n)
+                continue
             data["times"].append(datetime(int(ymd[0]),int(ymd[1]),int(ymd[2]),
                                          int(hms[0]),int(hms[1]),int(s)))
             data["alts"].append(float(items[3])/1000.0)
@@ -89,6 +92,8 @@ def _read_goce(file):
             data["FlagThuster"].append(int(items[17]))
 
     f.close()
+    if len(badlines) > 1:
+        print(f"Skipped {len(badlines)} lines in GOCE file {file}")
 
     # Here we are calculating the direction of travel of the sat:
 
