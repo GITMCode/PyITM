@@ -49,7 +49,9 @@ def extract_1d(sat_locations, model_data, extrapolate=False, verbose=False, inte
         t_ma_model = np.where((model_data['time'] >= t_min)
                              & (model_data['time'] <= t_max))[0]
         if len(t_ma_model) == 0:
-            raise ValueError("None of the satellite data and model outputs overlap!!")
+            raise ValueError("None of the satellite data and model outputs overlap!!"
+                            f"min/max sat: {sat_locations['times'][0]} / {sat_locations['times'][-1]}"
+                            f"min/max model: {model_data['times'][0]} / {model_data['times'][-1]}")
         
         model_data['data'] = model_data['data'][t_ma_model, ...]
         model_data['times'] = np.array(model_data['times'])[t_ma_model]
@@ -58,7 +60,9 @@ def extract_1d(sat_locations, model_data, extrapolate=False, verbose=False, inte
         t_ma_sat = np.where((sat_locations['times'] >= t_min) 
                             & (sat_locations['times'] < t_max))[0]
         if len(t_ma_sat) == 0:
-            raise ValueError("None of the satellite data and model outputs overlap!!")
+            raise ValueError("None of the satellite data and model outputs overlap!!"
+                            f"min/max sat: {sat_locations['times'][0]} / {sat_locations['times'][-1]}"
+                            f"min/max model: {model_data['times'][0]} / {model_data['times'][-1]}")
         
         for varname in sat_locations.keys():
             # might not be a numpy array
