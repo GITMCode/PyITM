@@ -6,7 +6,7 @@
 import datetime as dt
 import numpy as np
 
-def epoch_to_datetime(epoch_time):
+def epoch_to_datetime(epoch_time, t0 = dt.datetime(1965, 1, 1)):
     """Convert from epoch seconds to datetime.
 
     Parameters
@@ -25,7 +25,7 @@ def epoch_to_datetime(epoch_time):
 
     """
 
-    dtime = dt.datetime(1965, 1, 1) + dt.timedelta(seconds=epoch_time)
+    dtime = t0 + dt.timedelta(seconds=epoch_time)
 
     return dtime
 

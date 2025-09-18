@@ -74,10 +74,12 @@ def read_netcdf_one_file(filename, file_vars = None, verbose = False):
     #       updated package structure is confirmed
     # Initialize data dict with defaults (will remove these defaults later)
     data = {'filename': filename,
-            'units': '',
+            'units': {},
             'long_name': None}
+    
+    if verbose:
+        print('-> Reading netcdf : ', filename, ' --> Vars : ', file_vars)
 
-    print('-> Reading netcdf : ', filename, ' --> Vars : ', file_vars)
     with Dataset(filename, 'r') as ncfile:
         # Process header information: nlons, nlats, nalts, nblocks
         data['nlons'] = len(ncfile.dimensions['lon'])
@@ -96,9 +98,21 @@ def read_netcdf_one_file(filename, file_vars = None, verbose = False):
         for key in data['vars']:
             var = ncfile.variables[key]  # key is var name
             data[key] = DataArray(np.array(var), var.__dict__)
+            data['units'][key] = var.units if 'units' in var.__dict__ else ''
+
+        if 'since' in ncfile.variables['time'].units:
+            t0 = ncfile.variables['time'].units.split('since')[-1].strip()
+            t0 = datetime.strptime(t0, '%Y-%m-%d')
+            if verbose:
+                print('   -> Time conversion using t0 = ', t0)
+        else:
+            t0 = datetime(1965, 1, 1)
+
+        if verbose:
+            print('   -> Time conversion using default t0 = ', t0)
 
         data['times'] = \
-            tc.epoch_to_datetime(np.array(ncfile.variables['time'])[0])
+            tc.epoch_to_datetime(np.array(ncfile.variables['time'])[0], t0=t0)
 
         try:
             data['isEnsemble'] = True if ncfile.isEnsemble == "True" else False
