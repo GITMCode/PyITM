@@ -403,7 +403,7 @@ def read_sat_file(filename:str, satname=None, verbose=False):
 
     # Dispatch the reader based on the inferred name:
     satData = satreaders[satName](filename)
-    satData['sat_name'] = satName
+    satData['sat_name'] = satName.split('_')[0]
 
     return satData
 
