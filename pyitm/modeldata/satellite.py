@@ -220,25 +220,26 @@ def find_index(time, t):
     return iMid
 
 
-def orbit_average(satData, varlist=None, verbose=False):
+def calc_period(satData, verbose=False):
     """
-    Attempt to smooth satData using a rolling average over each orbital period
+    Determine the orbital period of the satellite, and add it to satData dict
 
     Inputs
     ------
         satData (dict) - satellite data read from satelliteio
-        varlist (list-like) - strings corresponding to keys in satData to smooth.
-            If None, smooth anything with sat_ ot model_ (default=None)
         verbose (bool=False) - print extra info?
 
     Returns
     -------
-        (dict) same as input but has smoothed values of each variable requested
-    
+        (dict) same as input but has 'orbital_period' key added
+
+    Notes
+    -----
+        This is not the most robust, however will work for most satellites/planets.
     """
 
-    # Determine orbital period, look for when sign of lat deriv changes
-    # Could use the stuff in thermo_goce but it's not 'planet-agnostic'
+    # Find where the satellite crosses the north pole (latitudes go from + to -)
+    # Then take the median time between those crossings as the period
     signLats = np.sign(np.diff(satData['lats']))
     
     iAtNorthPole = []
@@ -258,6 +259,34 @@ def orbit_average(satData, varlist=None, verbose=False):
     satData['orbital_period'] = tPeriod
     if verbose: 
         print(f"Found satellite orbital period of {tPeriod}, or {iPeriod} indices")
+    return satData
+
+
+def orbit_average(satData, varlist=None, verbose=False):
+    """
+    Attempt to smooth satData using a rolling average over each orbital period
+
+    Inputs
+    ------
+        satData (dict) - satellite data read from satelliteio. If 'orbital_period'
+            key is not present, will attempt to calculate it.
+        varlist (list-like) - strings corresponding to keys in satData to smooth.
+            If None, smooth anything with sat_* or model_* (default=None)
+        verbose (bool=False) - print extra info?
+
+    Returns
+    -------
+        (dict) same as input but has smoothed values of each variable requested
+    
+    """
+
+    if 'orbital_period' not in satData.keys():
+        satData = calc_period(satData, verbose=verbose)
+        if 'orbital_period' not in satData.keys():
+            if verbose:
+                print("No orbital period found. Cannot smooth.")
+            return satData
+    tPeriod = satData['orbital_period']
 
     if varlist is None:
         varlist = []
