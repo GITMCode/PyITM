@@ -8,6 +8,7 @@ NetCDF4 and HDF5 files must be read differently.
 from pyitm.fileio.util import any_to_filelist
 from pyitm.general.time_conversion import epoch_to_datetime
 import datetime
+import numpy as np
 
 # Standardize variable names if possible
 var_map = {'gdlat': 'lats',
@@ -129,39 +130,71 @@ def _read_madrigal_hdf5_file(filepath, verbose=False):
             print(" File structure:")
             f.visit(extrainfo)
 
-        datavars = {} # {datavars:lookup_name}
-        for param_dim in range(1, 4):
-            lookup = f"Data/Array Layout/{param_dim}D Parameters/Data Parameters"
-            if lookup in f:
-                if verbose:
-                    print(f"Found {param_dim}D parameters:")
-
-                for p in f[lookup]:
-                    varname = p['mnemonic'].decode()
-                    datavars[varname] = '/'.join(lookup.split('/')[:-1])+"/"+varname.lower()
+        #This is for multi-dimensional data, like TEC or precipitation
+        if 'Data/Array Layout' in f:
+            if verbose:
+                print("Found 'Data/Array Layout' in file, assuming multi-dimensional data.")
+            datavars = {} # {datavars:lookup_name}
+            for param_dim in range(1, 4):
+                lookup = f"Data/Array Layout/{param_dim}D Parameters/Data Parameters"
+                if lookup in f:
                     if verbose:
-                        print(" - ", varname, p['description'].decode())
-            else:
-                if verbose:
-                    print(f"No {param_dim}D parameters found.")
+                        print(f"Found {param_dim}D parameters:")
 
-        data = {}
-        for varname, lookup in datavars.items():
-            try:
+                    for p in f[lookup]:
+                        varname = p['mnemonic'].decode()
+                        datavars[varname] = '/'.join(lookup.split('/')[:-1])+"/"+varname.lower()
+                        if verbose:
+                            print(" - ", varname, p['description'].decode())
+                else:
+                    if verbose:
+                        print(f"No {param_dim}D parameters found.")
+
+            data = {}
+            for varname, lookup in datavars.items():
+                try:
+                    newname = var_map[varname.lower()] if varname.lower() in var_map else varname.lower()
+                    data[newname] = f[lookup][:]
+                    if verbose:
+                        print(f"-> Read variable '{varname}'->{newname} with shape {data[newname].shape}.")
+                except Exception as e:
+                    if verbose:
+                        print(f"-> Could not read variable '{varname}' from '{lookup}': {e}")
+
+            # OK FUN!
+            # As asinine as the rest of this was, it's worse when we have to read time.
+            # There's no metadata so we can't pull it out with the same methodology.
+            # AND the times are stored as 64-bit integers, which can't be used as the
+            # seconds component in datetime.timedeltas! :)
+            epochtimes = [int(i) for i in f['Data/Array Layout']['timestamps']]
+            data['times'] = epoch_to_datetime(epochtimes, datetime.datetime(1970, 1, 1))
+        
+        # 1D files are just a table, much easier!
+        elif 'Data/Table Layout' in f:
+            data = {}
+            times = {}
+            for varname_b in f['Metadata/Data Parameters']:
+                varname = varname_b['mnemonic'].decode().lower()
                 newname = var_map[varname.lower()] if varname.lower() in var_map else varname.lower()
-                data[newname] = f[lookup][:]
-                if verbose:
-                    print(f"-> Read variable '{varname}'->{newname} with shape {data[newname].shape}.")
-            except Exception as e:
-                if verbose:
-                    print(f"-> Could not read variable '{varname}' from '{lookup}': {e}")
-
-        # OK FUN!
-        # As asinine as the rest of this was, it's worse when we have to read time.
-        # There's no metadata so we can't pull it out with the same methodology.
-        # AND the times are stored as 64-bit integers, which can't be used as the
-        # seconds component in datetime.timedeltas! :)
-        epochtimes = [int(i) for i in f['Data/Array Layout']['timestamps']]
-        data['times'] = epoch_to_datetime(epochtimes, datetime.datetime(1970, 1, 1))
+                # Store time separately for now...
+                if varname in ['year', 'month', 'day', 'hour', 'minute', 'second']:
+                    times[varname] = f['Data/Table Layout'][varname]
+                    if verbose:
+                        print(f"-> Read time component '{varname}' with shape {times[varname].shape}.")
+                else:
+                    data[newname] = f['Data/Table Layout'][varname]
+                    if verbose:
+                        print(f"-> Read variable '{varname}'->{newname} with shape {data[newname].shape}.")
+            # Convert times to times key in data
+            for k in ['year', 'month', 'day', 'hour', 'minute', 'second']:
+                if k not in times:
+                    times[k] = np.zeros_like(times[list(times.keys())[0]])
+            data['times'] = np.array([datetime.datetime(int(y), int(m), int(d), int(h), int(mi), int(s))
+                             for y, m, d, h, mi, s in zip(times['year'], times['month'], times['day'],
+                                                  times['hour'], times['minute'], times['second'])])
+            if verbose:
+                print(f"-> Constructed {len(data['times'])} datetime objects for 'times' key.")
+                
+            
 
     return data
