@@ -24,8 +24,11 @@ def epoch_to_datetime(epoch_time, t0 = dt.datetime(1965, 1, 1)):
     Epoch starts at 1 Jan 1965.
 
     """
-
-    dtime = t0 + dt.timedelta(seconds=epoch_time)
+    try:
+        dtime = t0 + dt.timedelta(seconds=epoch_time)
+    except TypeError:
+        # Maybe it's an array of epoch times
+        dtime = np.array([t0 + dt.timedelta(seconds=et) for et in epoch_time])
 
     return dtime
 
