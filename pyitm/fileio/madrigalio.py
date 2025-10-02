@@ -19,7 +19,7 @@ var_map = {'gdlat': 'lats',
            'tec': 'tec',
 }
 
-def read_madrigal_file(filename, verbose=False):
+def _read_madrigal_one_file(filename, verbose=False):
     """
     Read a single Madrigal file, either netCDF or HDF5.
 
@@ -194,7 +194,5 @@ def _read_madrigal_hdf5_file(filepath, verbose=False):
                                                   times['hour'], times['minute'], times['second'])])
             if verbose:
                 print(f"-> Constructed {len(data['times'])} datetime objects for 'times' key.")
-                
-            
 
     return data
