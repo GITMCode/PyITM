@@ -2,7 +2,7 @@
 
 import re
 
-from pyitm.fileio import gitmio, netcdfio, variables
+from pyitm.fileio import gitmio, netcdfio, variables, satelliteio, madrigalio
 import numpy as np
 
 # ----------------------------------------------------------------------------

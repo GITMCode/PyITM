@@ -5,7 +5,6 @@ NetCDF4 and HDF5 files must be read differently.
 
 """
 
-from pyitm.fileio.util import any_to_filelist
 from pyitm.general.time_conversion import epoch_to_datetime
 import datetime
 import numpy as np
