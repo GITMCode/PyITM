@@ -1,5 +1,6 @@
 import numpy as np
 from datetime import datetime
+from pyitm.fileio import madrigalio
 
 def calc_wind_dir(lons, lats):
 
@@ -325,9 +326,10 @@ def _read_champ_winds(file):
     return data
 
 
-def read_sat_file(filename:str, satname=None, verbose=False):
+
+def _read_sat_one_file(filename:str, satname=None, verbose=False):
     """
-    Generic reader for any satellite file.
+    Generic reader for any satellite file. Called from util.read_satfiles.
 
     Will infer satellite name and use the correct reader
 
@@ -360,12 +362,17 @@ def read_sat_file(filename:str, satname=None, verbose=False):
     satreaders = {'grace_density': _read_grace,
                   'grace_wind': _read_grace_winds,
                   'goce': _read_goce,
-                  'champ': _read_champ}
+                  'champ': _read_champ,
+                  'dmsp_precipitation': madrigalio._read_madrigal_one_file,
+                  'dmsp_density': madrigalio._read_madrigal_one_file,
+                  }
     # satellite name & patterns that should be checked against filename
     satlookup = {'goce': ['go'],
                  'champ': ['ch'],
                  'grace_density': ['gr_dns', 'ga_dns', 'gb_dns', 'gc_dns'],
                  'grace_wind': ['gr_wnd', 'ga_wnd', 'gb_wnd', 'gc_wnd'],
+                 'dmsp_precipitation': ['e.001.hdf5', 'e.001.nc'], # format is dms_[date]_#_e...
+                 'dmsp_density': ['s1.001.hdf5', 's1.001.nc'], # format is dms_[date]_#_s1...
                  }
 
     if satname is None:
