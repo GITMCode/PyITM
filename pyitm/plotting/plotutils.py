@@ -14,6 +14,7 @@ def get_min_max_data(allSlices, yPos, \
                      yMin = -1e32, yMax = 1e32, \
                      color = 'default', \
                      minVal = 1e32, maxVal = -1e32,
+                     stdevFac = 3.0,
                      isLog = False):
     
     symmetric = False
@@ -29,14 +30,14 @@ def get_min_max_data(allSlices, yPos, \
         # check to see if these values are extreme:
         stddev = np.std(allSlices)
         ave = np.mean(allSlices)
-        if (mini < ave - 2*stddev):
-            mini = ave - 2*stddev
-        if (maxi > ave + 2*stddev):
+        if (mini < ave - stdevFac*stddev):
+            mini = ave - stdevFac*stddev
+        if (maxi > ave + stdevFac*stddev):
             print(' --> adjusting old max: ', maxi)
-            maxi = ave + 2*stddev
+            maxi = ave + stdevFac*stddev
             print(' -->           new max: ', maxi)
-        if (amaxi > np.abs(ave) + 2*stddev):
-            amaxi = np.abs(ave) + 2*stddev
+        if (amaxi > np.abs(ave) + stdevFac*stddev):
+            amaxi = np.abs(ave) + stdevFac*stddev
         doPlot = True
         mask = None
 
@@ -49,12 +50,12 @@ def get_min_max_data(allSlices, yPos, \
             amaxi = np.abs(allSlices[:, :, mask]).max() * 1.05
             stddev = np.std(allSlices[:, :, mask])
             ave = np.mean(allSlices[:, :, mask])
-            if (mini < ave - 2*stddev):
-                mini = ave - 2*stddev
-            if (maxi > ave + 2*stddev):
-                maxi = ave + 2*stddev
-            if (amaxi > np.abs(ave) + 2*stddev):
-                amaxi = np.abs(ave) + 2*stddev
+            if (mini < ave - stdevFac*stddev):
+                mini = ave - stdevFac*stddev
+            if (maxi > ave + stdevFac*stddev):
+                maxi = ave + stdevFac*stddev
+            if (amaxi > np.abs(ave) + stdevFac*stddev):
+                amaxi = np.abs(ave) + stdevFac*stddev
 
         else:
             doPlot = False
