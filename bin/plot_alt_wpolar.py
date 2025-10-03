@@ -49,6 +49,14 @@ def get_args():
     parser.add_argument('-lonmax',  default = 360, type = float, \
                         help = 'manually set the maxiumum latitude for the plots')
 
+    # directory to use as a background, so you can subtract one run from another
+    parser.add_argument('-backdir',  \
+                        default = '', \
+                        help = 'background directory to subtract off')
+    parser.add_argument('-percent',  \
+                        action='store_true', default = False, \
+                        help = 'plot percent different (if backdir specified)')
+
     parser.add_argument('-list',  \
                         action='store_true', default = False, \
                         help = 'list variables in file')
@@ -81,12 +89,19 @@ def plot_sphere(args, allData):
     sVarNum = allData['shortname'][0] + '_'
     sAltNum = 'alt%04d_' % int(realAlt)
 
+    if (len(args.backdir) > 0):
+        sAltNum = sAltNum + 'diff_'
+        if (args.percent):
+            varName = varName + ' (Per. Diff.)'
+        else:
+            varName = varName + ' (Diff.)'
+
     allTimes = allData['times']
 
     # get min and max values, plus color table:
     dataMinMax = plotutils.get_min_max_data(allSlices, None, \
-                     color = 'red', \
-                     minVal = 1e32, maxVal = -1e32)
+                                            color = 'red', \
+                                            minVal = args.mini, maxVal = args.maxi)
 
     sFilePre = sVarNum + sAltNum
     sTitleAdd = '; Alt: %.0f km' % realAlt
@@ -118,15 +133,22 @@ def plot_cubesphere(args, allData):
 
     allSlices = utils.data_slice(allData, iAlt = iAlt)
     varName = allData['longname'][0]
-    sVarNum = variables.strip_varname(allData['shortname'][0]) + '_'
+    sVarNum = allData['shortname'][0] + '_'
     sAltNum = 'alt%04d_' % int(realAlt)
+
+    if (len(args.backdir) > 0):
+        sAltNum = sAltNum + 'diff_'
+        if (args.percent):
+            varName = varName + ' (Per. Diff.)'
+        else:
+            varName = varName + ' (Diff.)'
 
     allTimes = allData['times']
 
     # get min and max values, plus color table:
     dataMinMax = plotutils.get_min_max_data(allSlices, None, \
-                     color = 'red', \
-                     minVal = 1e32, maxVal = -1e32)
+                                            color = 'red', \
+                                            minVal = args.mini, maxVal = args.maxi)
     
     lons3d = allData['lons'][:, :, :, iAlt]
     lats3d = allData['lats'][:, :, :, iAlt]
@@ -163,6 +185,11 @@ if __name__ == '__main__':
     if (not allData):
         util.list_file_info(filelist)
         exit()
+
+    if (len(args.backdir) > 0):
+        backfiles = util.find_files_in_different_directory(filelist, dir = args.backdir)
+        allBackground = util.read_all_files(backfiles, varToPlot, verbose = True)
+        allData = utils.subtract_all_slices(allData, allBackground, percent = args.percent)
 
     altGoal = args.alt
     
