@@ -187,11 +187,11 @@ def any_to_filelist(input_data=None):
         # maybe the user wants us to glob for them?
         else:
             # directory is already handled, it must be a path or something
-            outfiles = sorted(glob(input_data + "*.bin"))
-            if len(outfiles) > 0:
-                return outfiles
-            else:
-                notfound(f"No *.bin files found within:\n\t{input_data}")
+            for fileext in ['*.bin', '*.nc']:
+                outfiles = sorted(glob(input_data + fileext))
+                if len(outfiles) > 0:
+                    return outfiles
+            notfound(f"No {fileext} files found within:\n\t{input_data}")
 
     # we were probably given a list of files already
     else:
@@ -372,7 +372,6 @@ def lookup_satfiles(lookup_file, date_start, date_end=None, satname=None, verbos
             print(f"-> Searching for files in {sdir}")
         for eachdate in dates:
             p = eachdate.strftime(os.path.join(sdir, sfname))
-            print(p)
             days_files = sorted(glob(p))
             if verbose:
                 print(f"--> Found {len(days_files)} files for {eachdate}")
