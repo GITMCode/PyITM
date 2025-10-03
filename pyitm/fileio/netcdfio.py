@@ -108,9 +108,6 @@ def read_netcdf_one_file(filename, file_vars = None, verbose = False):
         else:
             t0 = datetime(1965, 1, 1)
 
-        if verbose:
-            print('   -> Time conversion using default t0 = ', t0)
-
         data['times'] = \
             tc.epoch_to_datetime(np.array(ncfile.variables['time'])[0], t0=t0)
 
@@ -201,9 +198,15 @@ def read_netcdf_one_header(filename):
                                                 'long_name'))
                 else:
                     data['longname'].append(key)
-
+        
+        if 'since' in ncfile.variables['time'].units:
+            t0 = ncfile.variables['time'].units.split('since')[-1].strip()
+            t0 = datetime.strptime(t0, '%Y-%m-%d')
+            
+        else:
+            t0 = datetime(1965, 1, 1)
         data['times'] = \
-            tc.epoch_to_datetime(np.array(ncfile.variables['time'])[0])
+            tc.epoch_to_datetime(np.array(ncfile.variables['time'])[0], t0=t0)
 
         try:
             data['isEnsemble'] = True if ncfile.isEnsemble == "True" else False
