@@ -72,6 +72,9 @@ def find_alts_oneblock(alts3d, goalAlt):
 
     return iAlts
 
+#-----------------------------------------------------------------------------
+# 
+#-----------------------------------------------------------------------------
 
 def find_alts(alts, goalAlt, blocks = False):
 
@@ -218,8 +221,8 @@ def slice_lon_3d(var3d, iLon):
     else:
         for iL in range(nLons-4):
             slice2d = slice2d + \
-                var3d[iLon + 2, :, :]
-        slice2d = slices / (nLons-4)
+                var3d[iL + 2, :, :]
+        slice2d = slice2d / (nLons-4)
 
     return slice2d
 
@@ -270,8 +273,6 @@ def data_slice(allData3D, iLon = -1, iLat = -1, iAlt = -1):
     nLats = allData3D['nlats']
     nAlts = allData3D['nalts']
     nBlocks = allData3D['nblocks']
-
-    print(nTimes, nVars, nBlocks, nLons, nLats, nAlts)
     
     doAltCut = False
     altArray = False
@@ -322,7 +323,7 @@ def data_slice(allData3D, iLon = -1, iLat = -1, iAlt = -1):
             else:
                 for iL in range(nLons-4):
                     slices[:, :, :, :] = slices[:, :, :, :] + \
-                        allData3D['data'][:, :, iLon, :, :]
+                        allData3D['data'][:, :, iL + 2, :, :]
                 slices[:, :, :, :] = slices[:, :, :, :] / (nLons-4)
     else:
         if (doAltCut):
@@ -405,6 +406,30 @@ def vertically_integrate(value, alts, calc3D = False):
     if (not calc3D):
         integrated = integrated[:,:,0]
     return integrated
+
+# ----------------------------------------------------------------------------
+# 
+# ----------------------------------------------------------------------------
+
+def copy_dictionary(dict_in):
+
+    dict_out = {}
+    for key in dict_in.keys():
+        dict_out[key] = dict_in[key]
+    
+    return dict_out
+
+#-----------------------------------------------------------------------------
+# Calculate TEC using the integration function
+#  --> Assume that we are giving it the [e-] as a variable!
+#-----------------------------------------------------------------------------
+
+def subtract_all_slices(AllData, AllDataBackground, percent = False):
+    newData = copy_dictionary(AllData)
+    newData['data'] = newData['data'] - AllDataBackground['data']
+    if (percent):
+        newData['data'] = newData['data'] / AllData['data'] * 100.0
+    return newData
 
 #-----------------------------------------------------------------------------
 # Calculate TEC using the integration function
