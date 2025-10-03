@@ -4,6 +4,7 @@ import re
 
 from pyitm.fileio import gitmio, netcdfio, variables
 import numpy as np
+from glob import glob
 
 # ----------------------------------------------------------------------------
 # Helpful functions for the io modules
@@ -35,6 +36,37 @@ def determine_filetype(filename):
     else:
         fType["myfile"] = fType["iNetcdf"]
     return fType
+
+# ----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
+
+def find_files_in_different_directory(filelist, dir):
+
+    filelist = any_to_filelist(filelist)
+
+    filelistOut = []
+    for file in filelist:
+        ft = determine_filetype(file)
+        if (ft['myfile'] == ft["iGitmBin"]):
+            ext = '.bin'
+        else:
+            ext = '.nc'
+        m = re.match(r'(.*)(\d)'+ext, file)
+        if m:
+            isGood = False
+            newfile = glob(dir + '/' + m.group(1) + '?' + ext)
+            if (np.isscalar(newfile)):
+                if (len(newfile) > 0):
+                    filelistOut.append(newfile)
+                    isGood = True
+            else:
+                if (len(newfile[0]) > 0):
+                    filelistOut.append(newfile[0])
+                    isGood = True
+            if (not isGood):
+                print('Can not file background file : ',file)
+
+    return filelistOut
 
 # ----------------------------------------------------------------------------
 # ----------------------------------------------------------------------------
