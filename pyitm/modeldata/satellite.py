@@ -49,7 +49,9 @@ def extract_1d(sat_locations, model_data, extrapolate=False, verbose=False, inte
         t_ma_model = np.where((model_data['time'] >= t_min)
                              & (model_data['time'] <= t_max))[0]
         if len(t_ma_model) == 0:
-            raise ValueError("None of the satellite data and model outputs overlap!!")
+            raise ValueError("None of the satellite data and model outputs overlap!!"
+                            f"min/max sat: {sat_locations['times'][0]} / {sat_locations['times'][-1]}"
+                            f"min/max model: {model_data['times'][0]} / {model_data['times'][-1]}")
         
         model_data['data'] = model_data['data'][t_ma_model, ...]
         model_data['times'] = np.array(model_data['times'])[t_ma_model]
@@ -58,7 +60,9 @@ def extract_1d(sat_locations, model_data, extrapolate=False, verbose=False, inte
         t_ma_sat = np.where((sat_locations['times'] >= t_min) 
                             & (sat_locations['times'] < t_max))[0]
         if len(t_ma_sat) == 0:
-            raise ValueError("None of the satellite data and model outputs overlap!!")
+            raise ValueError("None of the satellite data and model outputs overlap!!"
+                            f"min/max sat: {sat_locations['times'][0]} / {sat_locations['times'][-1]}"
+                            f"min/max model: {model_data['times'][0]} / {model_data['times'][-1]}")
         
         for varname in sat_locations.keys():
             # might not be a numpy array
@@ -68,9 +72,14 @@ def extract_1d(sat_locations, model_data, extrapolate=False, verbose=False, inte
     # setup for loop 
     itb4 = 0 # iTime before sat time
 
-    lons = np.rad2deg(np.unique(model_data['lons']))
-    lats = np.rad2deg(np.unique(model_data['lats']))
-    alts = np.unique(model_data['alts'])
+    lons = np.sort(np.unique(model_data['lons']))
+    lats = np.sort(np.unique(model_data['lats']))
+    alts = np.sort(np.unique(model_data['alts']))
+
+    if all(np.abs(lons) < 7):
+        lons = np.rad2deg(lons)
+    if all(np.abs(lats) < 7):
+        lats = np.rad2deg(lats)
 
     dLon = lons[1] - lons[0]
     dLat = lats[1] - lats[0]
@@ -100,7 +109,7 @@ def extract_1d(sat_locations, model_data, extrapolate=False, verbose=False, inte
 
     for i, time in enumerate(sat_locations['times']):
         
-        if model_data['times'][itb4 + 1] < time:
+        if model_data['times'][itb4 + 1] <= time:
             itb4 += 1
             if itb4+1 == len(model_data['times']):
                 itb4 -= 1
@@ -110,7 +119,7 @@ def extract_1d(sat_locations, model_data, extrapolate=False, verbose=False, inte
                   f"{model_data['times'][itb4+1]}")
         
         dt = (model_data["times"][itb4] - \
-            model_data["times"][itb4 + 1]).total_seconds()
+              model_data["times"][itb4 + 1]).total_seconds()
         xt = (time - model_data["times"][itb4]).total_seconds() / dt
 
         xLon = (sat_locations['lons'][i] - lons[0])/dLon
@@ -211,25 +220,26 @@ def find_index(time, t):
     return iMid
 
 
-def orbit_average(satData, varlist=None, verbose=False):
+def calc_period(satData, verbose=False):
     """
-    Attempt to smooth satData using a rolling average over each orbital period
+    Determine the orbital period of the satellite, and add it to satData dict
 
     Inputs
     ------
         satData (dict) - satellite data read from satelliteio
-        varlist (list-like) - strings corresponding to keys in satData to smooth.
-            If None, smooth anything with sat_ ot model_ (default=None)
         verbose (bool=False) - print extra info?
 
     Returns
     -------
-        (dict) same as input but has smoothed values of each variable requested
-    
+        (dict) same as input but has 'orbital_period' key added
+
+    Notes
+    -----
+        This is not the most robust, however will work for most satellites/planets.
     """
 
-    # Determine orbital period, look for when sign of lat deriv changes
-    # Could use the stuff in thermo_goce but it's not 'planet-agnostic'
+    # Find where the satellite crosses the north pole (latitudes go from + to -)
+    # Then take the median time between those crossings as the period
     signLats = np.sign(np.diff(satData['lats']))
     
     iAtNorthPole = []
@@ -239,8 +249,8 @@ def orbit_average(satData, varlist=None, verbose=False):
             iAtNorthPole.append(i)
             tAtNorthPole.append(satData['times'][i])
     try:
-        iPeriod = int(np.mean(np.diff(iAtNorthPole)))
-        tPeriod = np.mean(np.diff(tAtNorthPole))
+        iPeriod = int(np.round(np.median(np.diff(iAtNorthPole))))
+        tPeriod = np.median(np.diff(tAtNorthPole))
     except ValueError:
         # This is mostly for the test cases... May be useful for synthetic data too
         print("Times too short! Cannot orbit average. Sorry.")
@@ -249,6 +259,34 @@ def orbit_average(satData, varlist=None, verbose=False):
     satData['orbital_period'] = tPeriod
     if verbose: 
         print(f"Found satellite orbital period of {tPeriod}, or {iPeriod} indices")
+    return satData
+
+
+def orbit_average(satData, varlist=None, verbose=False):
+    """
+    Attempt to smooth satData using a rolling average over each orbital period
+
+    Inputs
+    ------
+        satData (dict) - satellite data read from satelliteio. If 'orbital_period'
+            key is not present, will attempt to calculate it.
+        varlist (list-like) - strings corresponding to keys in satData to smooth.
+            If None, smooth anything with sat_* or model_* (default=None)
+        verbose (bool=False) - print extra info?
+
+    Returns
+    -------
+        (dict) same as input but has smoothed values of each variable requested
+    
+    """
+
+    if 'orbital_period' not in satData.keys():
+        satData = calc_period(satData, verbose=verbose)
+        if 'orbital_period' not in satData.keys():
+            if verbose:
+                print("No orbital period found. Cannot smooth.")
+            return satData
+    tPeriod = satData['orbital_period']
 
     if varlist is None:
         varlist = []
