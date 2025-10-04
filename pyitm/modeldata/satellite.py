@@ -292,19 +292,21 @@ def orbit_average(satData, varlist=None, verbose=False):
 
     strs2ignore_smooth = ['flag','arg']
     for var in varlist:
+        dosmooth = True
         for badvar in strs2ignore_smooth:
             # If we have a variable we want to ignore...
             if badvar in var.lower():
-                continue
-
-        if verbose:
-            print("Smoothing ", var)
-        smoothed = np.zeros(len(satData['times']))
-        for i, t in enumerate(satData['times']):
-            iMin = find_index(satData['times'], t-tPeriod/2)
-            iMax = find_index(satData['times'], t+tPeriod/2)
-            s = np.mean(satData[var][iMin : iMax+1])
-            smoothed[i] = s
-        satData['smoothed_' + var] = smoothed
+                dosmooth = False
+        
+        if dosmooth:
+            if verbose:
+                print("Smoothing ", var)
+            smoothed = np.zeros(len(satData['times']))
+            for i, t in enumerate(satData['times']):
+                iMin = find_index(satData['times'], t-tPeriod/2)
+                iMax = find_index(satData['times'], t+tPeriod/2)
+                s = np.mean(satData[var][iMin : iMax+1])
+                smoothed[i] = s
+            satData['smoothed_' + var] = smoothed
 
     return satData
