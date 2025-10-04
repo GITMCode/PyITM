@@ -113,10 +113,6 @@ def extract_1d(sat_locations, model_data, extrapolate=False, verbose=False, inte
             itb4 += 1
             if itb4+1 == len(model_data['times']):
                 itb4 -= 1
-
-        if verbose:
-            print(f"->> in loop. sat time: {time}, gitmtimes: {model_data['times'][itb4]},"
-                  f"{model_data['times'][itb4+1]}")
         
         dt = (model_data["times"][itb4] - \
               model_data["times"][itb4 + 1]).total_seconds()
