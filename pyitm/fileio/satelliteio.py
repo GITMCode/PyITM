@@ -2,35 +2,6 @@ import numpy as np
 from datetime import datetime
 from pyitm.fileio import madrigalio
 
-def calc_wind_dir(lons, lats):
-
-    dlats = lats[1:] - lats[:-1]
-    dlats = np.concatenate((dlats, [dlats[-1]]))
-
-    dlons = lons[1:] - lons[:-1]
-    dlons = np.concatenate((dlons, [dlons[-1]]))
-
-    # Longitude can go across the 0 - 360 or 360 - 0 boundary, so
-    # we need to correct for this possibility:
-    
-    dlons[dlons > 180.0] = dlons[dlons > 180.0] - 360.0
-    dlons[dlons < -180.0] = dlons[dlons < -180.0] + 360.0
-
-    # Longitudes get closer together near the poles, so we need to
-    # correct for that also:
-    dlons = dlons * np.cos(lats * np.pi / 180.0)
-
-    # Make a unit vector of the direction of travel:
-    mag = np.sqrt(dlats**2 + dlons**2)
-    unitn = dlats / mag 
-    unite = dlons / mag
-
-    # Rotate the unit vector, so that it points orthogonal to the
-    # orbit plane.  This will be the actual wind vector direction:
-    uniteRot = unitn
-    unitnRot = -unite
-
-    return uniteRot, unitnRot
 
 def _read_goce(file):
     """
