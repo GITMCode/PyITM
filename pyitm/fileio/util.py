@@ -270,7 +270,8 @@ def read_satfiles(filelist=None, satname=None,
         # This has to be manual since naming conventions vary.
         if 'dmsp' in satnames[-1].lower():
             # dms_20150716_18s1.001.* (or) dms_ut_20240515_18.002.hdf5
-            satnames[-1] = 'DMSP_F'+f.split('/')[-1].split('_')[-1][:2]
+            # Keep precip/density! cols are different so the reader needs to keep them separate
+            satnames[-1] = 'DMSP_F'+f.split('/')[-1].split('_')[-1][:2]+'-'+satnames[-1].split('_')[-1]
         if 'grace' in satnames[-1].lower():
             # ga_dns_...
             satnames[-1] = 'GRACE'+f.split('/')[-1][1]
