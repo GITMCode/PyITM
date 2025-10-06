@@ -357,7 +357,7 @@ def _read_sat_one_file(filename:str, satname=None, verbose=False):
                   'champ': _read_champ,
                   'dmsp_precipitation': madrigalio._read_madrigal_one_file,
                   'dmsp_density': madrigalio._read_madrigal_one_file,
-                  'dmsp': madrigalio._read_madrigal_one_file,
+                  'dmsp_utd': madrigalio._read_madrigal_one_file,
                   }
     # satellite name & patterns that should be checked against filename
     satlookup = {'goce': ['go'],
@@ -366,7 +366,7 @@ def _read_sat_one_file(filename:str, satname=None, verbose=False):
                  'grace_wind': ['gr_wnd', 'ga_wnd', 'gb_wnd', 'gc_wnd'],
                  'dmsp_precipitation': ['e.001.hdf5', 'e.001.nc'], # format is dms_[date]_#_e...
                  'dmsp_density': ['s1.001.hdf5', 's1.001.nc'], # format is dms_[date]_#_s1...
-                 'dmsp': ['dms_ut_', ], # dms_ut_20240515_##.002.hdf5
+                 'dmsp_utd': ['dms_ut_', ], # dms_ut_20240515_##.002.hdf5
                  }
 
     if satname is None:
@@ -407,7 +407,7 @@ def _read_sat_one_file(filename:str, satname=None, verbose=False):
 
     # Dispatch the reader based on the inferred name:
     satData = satreaders[satName](filename, verbose=verbose)
-    satData['sat_name'] = satName.split('_')[0]
+    satData['sat_name'] = satName
 
     return satData
 
