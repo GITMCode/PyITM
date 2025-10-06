@@ -3,7 +3,8 @@
 import numpy as np
 from pyitm.fileio import variables
 
-def extract_1d(sat_locations, model_data, extrapolate=False, verbose=False, interpVar=None):
+def extract_1d(sat_locations, model_data, interpVar=None,
+               extrapolate=False, verbose=False):
     """ Fly a satellite through model results, returning a timeseries
 
     Parameters
@@ -13,12 +14,12 @@ def extract_1d(sat_locations, model_data, extrapolate=False, verbose=False, inte
     model_data (dict): dictionary returned from one of the read routines.
         Should contain info on time, grid, and any variables we want to interpolate.
     
+    interpVar (int or list of int's): which variable (indices) to interpolate. default=None, so 
+        interpolate every variable (except lon, lat, [alt]) in the model_data file.
+
     extrapolate (bool): whether to use data outside the time range covered by both data.
 
     verbose (bool): print debugging info? default=False
-
-    interpVar (int or list): which variable (indices) to interpolate. default=None, so 
-        interpolate every variable (except lon, lat, alt) in the model_data file
 
     Returns
     -------
@@ -86,26 +87,26 @@ def extract_1d(sat_locations, model_data, extrapolate=False, verbose=False, inte
     nAlts = len(alts)
 
     if interpVar is None:
-        # skip first 3 vars, usually lon,lat,alt
-        interpVar = range(3, model_data['nvars'])
+        # skip first 3 vars, usually lon, lat, alt
+        interpVar = []
+        for iVar, varname in enumerate(model_data['vars']):
+            if varname not in ['Longitude', 'Latitude', 'Altitude']:
+                interpVar.append(iVar)
 
     else:
-        # -3's are because we don't want to interp lon, lat, alt
-        try:
-            if isinstance(interpVar, int): #single int
-                interpVar = [interpVar - 3]
-            else: # list of strings? (will error if not)
-                interpVar = [i-3 for i in variables.convert_var_to_number(interpVar)]
-        except AttributeError: # or list of ints?
-            interpVar = [int(i)-3 for i in interpVar]
-
-        # check if we only read in one variable. Reshape model_data if so
-        if len(model_data['data'].shape) == 4:
-            t, x, y, z = model_data['data'].shape
-            model_data['data'] = model_data['data'].reshape((t, 1, x, y, z))
+        if isinstance(interpVar, int): #single int
+            interpVar = [interpVar]
+            
+    # check if we only read in one variable. Reshape model_data if so
+    if len(model_data['data'].shape) == 4:
+        t, x, y, z = model_data['data'].shape
+        model_data['data'] = model_data['data'].reshape((t, 1, x, y, z))
 
     # outData is a dict to simplify lookups.
     outVals = {iVar: [] for iVar in interpVar}
+
+    if verbose:
+        print(f" -> Interpolating variables: {[model_data['vars'][i] for i in interpVar]}.")
 
     for i, time in enumerate(sat_locations['times']):
         
@@ -186,6 +187,9 @@ def extract_1d(sat_locations, model_data, extrapolate=False, verbose=False, inte
     for inKey in sat_locations.keys():
         if inKey not in wantAlways:
             outData['sat_' + inKey] = np.array(sat_locations[inKey])
+
+    if verbose:
+        print(f" -> Interpolation done! Returning dict with keys:\n\t{outData.keys()}")
 
     return outData
 
