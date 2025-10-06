@@ -1,6 +1,7 @@
 import numpy as np
 from datetime import datetime
 from pyitm.fileio import madrigalio
+from pyitm.modeldata.satellite import calc_wind_dir
 
 
 def _read_goce(file):
