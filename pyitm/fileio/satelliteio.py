@@ -358,6 +358,7 @@ def _read_sat_one_file(filename:str, satname=None, verbose=False):
                   'dmsp_precipitation': madrigalio._read_madrigal_one_file,
                   'dmsp_density': madrigalio._read_madrigal_one_file,
                   'dmsp_utd': madrigalio._read_madrigal_one_file,
+                  'gps': madrigalio._read_madrigal_one_file,
                   }
     # satellite name & patterns that should be checked against filename
     satlookup = {'goce': ['go'],
@@ -367,6 +368,7 @@ def _read_sat_one_file(filename:str, satname=None, verbose=False):
                  'dmsp_precipitation': ['e.001.hdf5', 'e.001.nc'], # format is dms_[date]_#_e...
                  'dmsp_density': ['s1.001.hdf5', 's1.001.nc'], # format is dms_[date]_#_s1...
                  'dmsp_utd': ['dms_ut_', ], # dms_ut_20240515_##.002.hdf5
+                 'gps': ['gps'], # gps110806g.003.hdf5
                  }
 
     if satname is None:
