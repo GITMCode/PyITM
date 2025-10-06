@@ -2,7 +2,7 @@
 
 from bin import plot_satellite
 from pyitm.modeldata import satellite
-from pyitm.fileio import gitmio, satelliteio
+from pyitm.fileio import gitmio, util
 import datetime
 import glob
 import numpy as np
@@ -29,16 +29,16 @@ while sattime < satendtime:
     sats['times'].append(sattime)
     sattime += datetime.timedelta(seconds=dt_sat)
 
-a1 = satellite.extract_1d(sats, dat, False, True, interpVar=34)
-a2 = satellite.extract_1d(sats, dat, False, True)
+a1 = satellite.extract_1d(sats, dat, extrapolate=False, verbose=True, interpVar=[34])
+a2 = satellite.extract_1d(sats, dat, extrapolate=False, verbose=True, interpVar=[34])
 
 print(a1.keys())
 print(a2.keys())
 
-sat1 = satelliteio.read_sat_file('data/satfiles/CH_DNS_ACC_2002_12_v01.txt', verbose=True)
+sat1 = util.read_satfiles('data/satfiles/CH_DNS_ACC_2002_12_v01.txt', verbose=True)
 print(sat1.keys())
 
-a3 = satellite.extract_1d(sat1, dat, verbose=False)
+a3 = satellite.extract_1d(sat1['champ'], dat, verbose=False)
 for k in a3.keys():
     print(k, len(a3[k]))
 
@@ -48,12 +48,14 @@ for k in a3.keys():
 plot_satellite.main(satfiles=['data/satfiles/CH_DNS_ACC_2002_12_v01.txt'],
                     modeldatapath='data/3DALL_t0212*',
                     vars2plot='rho',
+                    savePlot=False,
                     verbose=True)
 
 
 plot_satellite.main(satfiles=['data/satfiles/CH_DNS_ACC_2002_12_v01.txt'],
                     modeldatapath='data/3DALL_t0212*',
                     vars2plot=3,
+                    savePlot=False,
                     verbose=True)
 
 newfiles = glob.glob('champ*')
