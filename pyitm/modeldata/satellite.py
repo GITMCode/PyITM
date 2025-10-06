@@ -9,7 +9,9 @@ def extract_1d(sat_locations, model_data, interpVar=None,
 
     Parameters
     ----------
-    sat_locations (dict): dictionary containing (at minimum) keys (time, lon, lat, alt)
+    sat_locations (dict): dictionary containing (at minimum) keys (time, lon, lat, [alt]).
+        If alt is not present, model data will be altitude integrated (TEC). All other
+        variables present will be returned in the output dict.
 
     model_data (dict): dictionary returned from one of the read routines.
         Should contain info on time, grid, and any variables we want to interpolate.
@@ -75,8 +77,10 @@ def extract_1d(sat_locations, model_data, interpVar=None,
 
     lons = np.sort(np.unique(model_data['lons']))
     lats = np.sort(np.unique(model_data['lats']))
+    # Will be present in 2D files, but only one value
     alts = np.sort(np.unique(model_data['alts']))
 
+    # rad to degrees if needed
     if all(np.abs(lons) < 7):
         lons = np.rad2deg(lons)
     if all(np.abs(lats) < 7):
@@ -84,7 +88,11 @@ def extract_1d(sat_locations, model_data, interpVar=None,
 
     dLon = lons[1] - lons[0]
     dLat = lats[1] - lats[0]
-    nAlts = len(alts)
+
+    if 'alts' in sat_locations.keys():
+        nAlts = len(alts)
+    else:
+        nAlts = 1
 
     if interpVar is None:
         # skip first 3 vars, usually lon, lat, alt
@@ -136,7 +144,11 @@ def extract_1d(sat_locations, model_data, interpVar=None,
                     kAlt = nAlts-2
                     zAlt = 1.0
                 else:
-                    raise ValueError("Above model altitude domain!")
+                    raise ValueError(
+                        "Above model altitude domain!\n"
+                        f" Max 3 modeled altitudes:{np.round(alts[-3:], 2)}\n"
+                        f" Min/Max satellite altitude: "
+                        f"({round(np.min(sat_locations['alts']), 1)}/{round(np.max(sat_locations['alts']),1)})")
             else:
                 while (alts[kAlt] < sat_locations['alts'][i]):
                     kAlt = kAlt + 1
