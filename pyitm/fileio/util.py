@@ -243,9 +243,9 @@ def read_satfiles(filelist=None, satname=None,
     """
 
     if satLookup is not None:
-        filelist, satnames =  lookup_satfiles(satLookup, date_start=startDate,
+        filelist, satnames = lookup_satfiles(satLookup, date_start=startDate,
                                              date_end=endDate, satname=satname,
-                                               verbose=verbose)
+                                             verbose=verbose)
     else:
         filelist = any_to_filelist(filelist)
     
@@ -325,10 +325,6 @@ def lookup_satfiles(lookup_file, date_start, date_end=None, satname=None, verbos
         List of paths to satellite files found in the directory.
     """
 
-    # list here to add more satellite names. Case insensitive
-    sats = ['Goce', 'grace', 'gracefo', 'champ', 'swarm', 'dmsp', 'dms', 'guvi',
-            ]
-
     # deal with dates
     dates = []
     if isinstance(date_start, (datetime.datetime, datetime.date)):
@@ -377,6 +373,17 @@ def lookup_satfiles(lookup_file, date_start, date_end=None, satname=None, verbos
             sat_filenames.append('*')
     if verbose:
         print(f"-> Found {len(satnames)} entries in lookup table.")
+
+    if satname is not None:
+        if satname in satnames:
+            isat = satnames.index(satname)
+            satnames = satnames[isat]
+            sat_paths = sat_paths[isat]
+            sat_filenames = sat_filenames[isat]
+        else:
+            raise KeyError(
+                f"From lookup_satfiles '{satname}' not found!"
+                f"  Expected one of: {satnames}")
 
     satfiles_out = []
     satnames_out = []
