@@ -254,12 +254,12 @@ def read_satfiles(filelist=None, satname=None,
         all_data.append(data)
     
     # Here we separate multiple satellites from a constellation.
-    # This has to be manual since the naming conventions are different for each.
+    # This has to be manual since naming conventions vary.
     if any('dmsp' in s.lower() for s in satnames):
         satnames = []
         for f in filelist:
-            # dms_20150716_18s1.001.* 
-            satnames.append('DMSP_F'+f.split('/')[-1].split('_')[2][:3])
+            # dms_20150716_18s1.001.* (or) dms_ut_20240515_18.002.hdf5
+            satnames.append('DMSP_F'+f.split('/')[-1].split('_')[-1][:2])
     if any('grace' in s.lower() for s in satnames):
         satnames = []
         for f in filelist:
