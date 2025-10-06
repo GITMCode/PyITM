@@ -4,13 +4,14 @@ from pyitm.fileio import madrigalio
 from pyitm.modeldata.satellite import calc_wind_dir
 
 
-def _read_goce(file):
+def _read_goce(file, verbose=False):
     """
     Read a GOCE file
 
     Inputs
     ------
         file (str) - Path to GOCE file
+        verbose (bool) - print extra info? Default=False
 
     Returns
     -------
@@ -34,6 +35,9 @@ def _read_goce(file):
     data["FlagEclipse"] = []
     data["FlagAD"] = []
     data["FlagThuster"] = []
+
+    if verbose:
+        print(f" -> read_goce: Opening {file}")
 
     f = open(file, 'r')
     badlines = []
@@ -82,13 +86,14 @@ def _read_goce(file):
 # Read CHAMP data
 #-----------------------------------------------------------------------------
 
-def _read_champ(file):
+def _read_champ(file, verbose=False):
     """
     Read a CHAMP file
 
     Inputs
     ------
         file (str) - Path to CHAMP file
+        verbose (bool) - print extra info? Default=False
 
     Returns
     -------
@@ -103,6 +108,9 @@ def _read_champ(file):
     data["lons"] = []
     data["lst"] = []
     data["rho"] = []
+
+    if verbose:
+        print(f" -> read_champ: Opening {file}")
 
     f = open(file, 'r')
 
@@ -125,13 +133,14 @@ def _read_champ(file):
 
     return data
 
-def _read_grace(file):
+def _read_grace(file, verbose=False):
     """
     Read a GRACE/GRACE-FO file
 
     Inputs
     ------
         file (str) - Path to GRACE file
+        verbose (bool) - print extra info? Default=False
 
     Returns
     -------
@@ -150,6 +159,9 @@ def _read_grace(file):
     data["rho_mean"] = []
     data["rho_flag"] = []
     data["rho_mean_flag"] = []
+
+    if verbose:
+        print(f" -> read_grace (no wind): Opening {file}")
 
     f = open(file, 'r')
 
@@ -184,6 +196,7 @@ def _read_grace_winds(file):
     Inputs
     ------
         file (str) - Path to GRACE file
+        verbose (bool) - print extra info? Default=False
 
     Returns
     -------
@@ -206,6 +219,9 @@ def _read_grace_winds(file):
     data["Ve"] = []
     data["Vv"] = []
     data["validity_flag"] = []
+
+    if verbose:
+        print(f" -> read_grace_winds: Opening {file}")
 
     f = open(file, 'r')
 
@@ -240,13 +256,14 @@ def _read_grace_winds(file):
 
 
 
-def _read_champ_winds(file):
+def _read_champ_winds(file, verbose=False):
     """
     Read a CHAMP wind file
 
     Parameters
     ----------
         file (str) - Path to CHAMP file
+        verbose (bool) - print extra info? Default=False
 
     Returns
     -------
@@ -264,6 +281,9 @@ def _read_champ_winds(file):
     data["Vn"] = []
     data["Vv"] = []
     data["quality_flag"] = []
+
+    if verbose:
+        print(f" -> read_champ_winds: Opening {file}")
 
     f = open(file, 'r')
 
