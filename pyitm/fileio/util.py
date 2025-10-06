@@ -254,12 +254,17 @@ def read_satfiles(filelist=None, satname=None,
 
     all_data = []
     satnames = []
+    read_files = []
     for f in filelist:
+        # Do not re-read, some files are monthly.
+        if f in read_files:
+            continue
         if verbose:
             print(f"-> Reading file: {f}")
         data = satelliteio._read_sat_one_file(f, satname=satname, verbose=verbose)
         satnames.append(data.pop('sat_name'))
         all_data.append(data)
+        read_files.append(f)
     
         # Here we separate multiple satellites from a constellation.
         # This has to be manual since naming conventions vary.
