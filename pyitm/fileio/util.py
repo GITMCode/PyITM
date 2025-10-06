@@ -280,15 +280,13 @@ def read_satfiles(filelist=None, satname=None,
     unique_names = []
     for name, data in zip(satnames, all_data):
         # Make sure satellite is in combined_data
-        if name in combined_data:
-            continue
-        else:
+        if name not in combined_data:
             combined_data[name] = {}
             unique_names.append(name)
         
         # add the satellite data
         for key, value in data.items():
-            if key in combined_data[name]:
+            if key in combined_data[name].keys():
                 combined_data[name][key] = np.concatenate((combined_data[name][key], value))
             else:
                 combined_data[name][key] = value
