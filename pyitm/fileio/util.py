@@ -170,7 +170,7 @@ def any_to_filelist(input_data=None):
 
     if isinstance(input_data, (str, os.PathLike)):
         # Single file that exists:
-        if os.path.isfile(input_data):
+        if os.path.isfile(input_data) and os.path.exists(input_data):
             return [input_data]
         # directory that exists, return all .bin files inside
         elif os.path.isdir(input_data):
@@ -195,7 +195,15 @@ def any_to_filelist(input_data=None):
 
     # we were probably given a list of files already
     else:
-        return input_data
+        # If it is only one string, send that back in here as string, not list.
+        if len(input_data) == 1:
+            # This will loop infinitely if we don't first check if that one file exists
+            if os.path.exists(input_data[0]):
+                return input_data
+            else:
+                return any_to_filelist(input_data[0])
+        else: #list of files is longer that one
+            return input_data
 
 def read_satfiles(filelist=None, satname=None, 
                   satLookup=None, startDate=None, endDate=None,
@@ -282,6 +290,11 @@ def read_satfiles(filelist=None, satname=None,
                 combined_data[name][key] = np.concatenate((combined_data[name][key], value))
             else:
                 combined_data[name][key] = value
+    
+    if verbose:
+        print(f" -> Found sat data from satellites: {combined_data.keys()}")
+        for satname in combined_data.keys():
+            print(f" --> data['{satname}'] has keys: {combined_data[satname].keys()}")
 
     return combined_data
 
