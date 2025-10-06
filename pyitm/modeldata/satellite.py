@@ -357,3 +357,24 @@ def calc_wind_dir(lons, lats):
 
     return uniteRot, unitnRot
 
+def calc_zon_merid_wind(satDataDict, verbose=False):
+    """
+    Takes satDataDict and transforms ve/vn columns to zonal & meridional winds. Assumes
+    satellite's ve/vn are already aligned to the satellite trajectory (cross-track)
+    
+    """
+    
+    unitE, unitN = calc_wind_dir(satDataDict['lons'], satDataDict['lats'])
+
+    if 'model_Ve' and 'model_Vn' in satDataDict:
+        satDataDict['model_Ve'] = unitE * satDataDict['model_Ve']
+        satDataDict['model_Vn'] = unitN * satDataDict['model_Vn']
+    elif 'model_Vie' and 'model_Vin' in satDataDict:
+        satDataDict['model_Vie'] = unitE * satDataDict['model_Vie']
+        satDataDict['model_Vin'] = unitN * satDataDict['model_Vin']
+    else:
+        raise KeyError(
+            f"Horizontal winds not found! Found keys:\n\t{satDataDict.keys()}")
+
+    return satDataDict
+
