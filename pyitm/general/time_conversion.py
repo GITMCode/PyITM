@@ -78,7 +78,10 @@ def ut_to_lt(time_array, glon):
 
     """
 
-    time_array = np.asarray(time_array)
+    if isinstance(time_array, dt.datetime):
+        # put single time into a list
+        time_array = [time_array]
+    time_array = np.asarray(time_array, dtype=dt.datetime)
     glon = np.asarray(glon)
 
     # Get UT seconds of day

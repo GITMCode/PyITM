@@ -1,44 +1,17 @@
 import numpy as np
 from datetime import datetime
 from pyitm.fileio import madrigalio
+from pyitm.modeldata.satellite import calc_wind_dir
 
-def calc_wind_dir(lons, lats):
 
-    dlats = lats[1:] - lats[:-1]
-    dlats = np.concatenate((dlats, [dlats[-1]]))
-
-    dlons = lons[1:] - lons[:-1]
-    dlons = np.concatenate((dlons, [dlons[-1]]))
-
-    # Longitude can go across the 0 - 360 or 360 - 0 boundary, so
-    # we need to correct for this possibility:
-    
-    dlons[dlons > 180.0] = dlons[dlons > 180.0] - 360.0
-    dlons[dlons < -180.0] = dlons[dlons < -180.0] + 360.0
-
-    # Longitudes get closer together near the poles, so we need to
-    # correct for that also:
-    dlons = dlons * np.cos(lats * np.pi / 180.0)
-
-    # Make a unit vector of the direction of travel:
-    mag = np.sqrt(dlats**2 + dlons**2)
-    unitn = dlats / mag 
-    unite = dlons / mag
-
-    # Rotate the unit vector, so that it points orthogonal to the
-    # orbit plane.  This will be the actual wind vector direction:
-    uniteRot = unitn
-    unitnRot = -unite
-
-    return uniteRot, unitnRot
-
-def _read_goce(file):
+def _read_goce(file, verbose=False):
     """
     Read a GOCE file
 
     Inputs
     ------
         file (str) - Path to GOCE file
+        verbose (bool) - print extra info? Default=False
 
     Returns
     -------
@@ -62,6 +35,9 @@ def _read_goce(file):
     data["FlagEclipse"] = []
     data["FlagAD"] = []
     data["FlagThuster"] = []
+
+    if verbose:
+        print(f" -> read_goce: Opening {file}")
 
     f = open(file, 'r')
     badlines = []
@@ -110,13 +86,14 @@ def _read_goce(file):
 # Read CHAMP data
 #-----------------------------------------------------------------------------
 
-def _read_champ(file):
+def _read_champ(file, verbose=False):
     """
     Read a CHAMP file
 
     Inputs
     ------
         file (str) - Path to CHAMP file
+        verbose (bool) - print extra info? Default=False
 
     Returns
     -------
@@ -131,6 +108,9 @@ def _read_champ(file):
     data["lons"] = []
     data["lst"] = []
     data["rho"] = []
+
+    if verbose:
+        print(f" -> read_champ: Opening {file}")
 
     f = open(file, 'r')
 
@@ -153,13 +133,14 @@ def _read_champ(file):
 
     return data
 
-def _read_grace(file):
+def _read_grace(file, verbose=False):
     """
     Read a GRACE/GRACE-FO file
 
     Inputs
     ------
         file (str) - Path to GRACE file
+        verbose (bool) - print extra info? Default=False
 
     Returns
     -------
@@ -178,6 +159,9 @@ def _read_grace(file):
     data["rho_mean"] = []
     data["rho_flag"] = []
     data["rho_mean_flag"] = []
+
+    if verbose:
+        print(f" -> read_grace (no wind): Opening {file}")
 
     f = open(file, 'r')
 
@@ -212,6 +196,7 @@ def _read_grace_winds(file):
     Inputs
     ------
         file (str) - Path to GRACE file
+        verbose (bool) - print extra info? Default=False
 
     Returns
     -------
@@ -234,6 +219,9 @@ def _read_grace_winds(file):
     data["Ve"] = []
     data["Vv"] = []
     data["validity_flag"] = []
+
+    if verbose:
+        print(f" -> read_grace_winds: Opening {file}")
 
     f = open(file, 'r')
 
@@ -268,13 +256,14 @@ def _read_grace_winds(file):
 
 
 
-def _read_champ_winds(file):
+def _read_champ_winds(file, verbose=False):
     """
     Read a CHAMP wind file
 
     Parameters
     ----------
         file (str) - Path to CHAMP file
+        verbose (bool) - print extra info? Default=False
 
     Returns
     -------
@@ -292,6 +281,9 @@ def _read_champ_winds(file):
     data["Vn"] = []
     data["Vv"] = []
     data["quality_flag"] = []
+
+    if verbose:
+        print(f" -> read_champ_winds: Opening {file}")
 
     f = open(file, 'r')
 
@@ -365,7 +357,8 @@ def _read_sat_one_file(filename:str, satname=None, verbose=False):
                   'champ': _read_champ,
                   'dmsp_precipitation': madrigalio._read_madrigal_one_file,
                   'dmsp_density': madrigalio._read_madrigal_one_file,
-                  'dmsp': madrigalio._read_madrigal_one_file,
+                  'dmsp_utd': madrigalio._read_madrigal_one_file,
+                  'gps': madrigalio._read_madrigal_one_file,
                   }
     # satellite name & patterns that should be checked against filename
     satlookup = {'goce': ['go'],
@@ -374,7 +367,8 @@ def _read_sat_one_file(filename:str, satname=None, verbose=False):
                  'grace_wind': ['gr_wnd', 'ga_wnd', 'gb_wnd', 'gc_wnd'],
                  'dmsp_precipitation': ['e.001.hdf5', 'e.001.nc'], # format is dms_[date]_#_e...
                  'dmsp_density': ['s1.001.hdf5', 's1.001.nc'], # format is dms_[date]_#_s1...
-                 'dmsp': ['dms_ut_', ], # dms_ut_20240515_##.002.hdf5
+                 'dmsp_utd': ['dms_ut_', ], # dms_ut_20240515_##.002.hdf5
+                 'gps': ['gps'], # gps110806g.003.hdf5
                  }
 
     if satname is None:
@@ -415,7 +409,7 @@ def _read_sat_one_file(filename:str, satname=None, verbose=False):
 
     # Dispatch the reader based on the inferred name:
     satData = satreaders[satName](filename, verbose=verbose)
-    satData['sat_name'] = satName.split('_')[0]
+    satData['sat_name'] = satName
 
     return satData
 

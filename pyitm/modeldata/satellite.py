@@ -3,22 +3,25 @@
 import numpy as np
 from pyitm.fileio import variables
 
-def extract_1d(sat_locations, model_data, extrapolate=False, verbose=False, interpVar=None):
+def extract_1d(sat_locations, model_data, interpVar=None,
+               extrapolate=False, verbose=False):
     """ Fly a satellite through model results, returning a timeseries
 
     Parameters
     ----------
-    sat_locations (dict): dictionary containing (at minimum) keys (time, lon, lat, alt)
+    sat_locations (dict): dictionary containing (at minimum) keys (time, lon, lat, [alt]).
+        If alt is not present, model data will be altitude integrated (TEC). All other
+        variables present will be returned in the output dict.
 
     model_data (dict): dictionary returned from one of the read routines.
         Should contain info on time, grid, and any variables we want to interpolate.
     
+    interpVar (int or list of int's): which variable (indices) to interpolate. default=None, so 
+        interpolate every variable (except lon, lat, [alt]) in the model_data file.
+
     extrapolate (bool): whether to use data outside the time range covered by both data.
 
     verbose (bool): print debugging info? default=False
-
-    interpVar (int or list): which variable (indices) to interpolate. default=None, so 
-        interpolate every variable (except lon, lat, alt) in the model_data file
 
     Returns
     -------
@@ -74,8 +77,10 @@ def extract_1d(sat_locations, model_data, extrapolate=False, verbose=False, inte
 
     lons = np.sort(np.unique(model_data['lons']))
     lats = np.sort(np.unique(model_data['lats']))
+    # Will be present in 2D files, but only one value
     alts = np.sort(np.unique(model_data['alts']))
 
+    # rad to degrees if needed
     if all(np.abs(lons) < 7):
         lons = np.rad2deg(lons)
     if all(np.abs(lats) < 7):
@@ -83,29 +88,33 @@ def extract_1d(sat_locations, model_data, extrapolate=False, verbose=False, inte
 
     dLon = lons[1] - lons[0]
     dLat = lats[1] - lats[0]
-    nAlts = len(alts)
+
+    if 'alts' in sat_locations.keys():
+        nAlts = len(alts)
+    else:
+        nAlts = 1
 
     if interpVar is None:
-        # skip first 3 vars, usually lon,lat,alt
-        interpVar = range(3, model_data['nvars'])
+        # skip first 3 vars, usually lon, lat, alt
+        interpVar = []
+        for iVar, varname in enumerate(model_data['vars']):
+            if varname not in ['Longitude', 'Latitude', 'Altitude']:
+                interpVar.append(iVar)
 
     else:
-        # -3's are because we don't want to interp lon, lat, alt
-        try:
-            if isinstance(interpVar, int): #single int
-                interpVar = [interpVar - 3]
-            else: # list of strings? (will error if not)
-                interpVar = [i-3 for i in variables.convert_var_to_number(interpVar)]
-        except AttributeError: # or list of ints?
-            interpVar = [int(i)-3 for i in interpVar]
-
-        # check if we only read in one variable. Reshape model_data if so
-        if len(model_data['data'].shape) == 4:
-            t, x, y, z = model_data['data'].shape
-            model_data['data'] = model_data['data'].reshape((t, 1, x, y, z))
+        if isinstance(interpVar, int): #single int
+            interpVar = [interpVar]
+            
+    # check if we only read in one variable. Reshape model_data if so
+    if len(model_data['data'].shape) == 4:
+        t, x, y, z = model_data['data'].shape
+        model_data['data'] = model_data['data'].reshape((t, 1, x, y, z))
 
     # outData is a dict to simplify lookups.
     outVals = {iVar: [] for iVar in interpVar}
+
+    if verbose:
+        print(f" -> Interpolating variables: {[model_data['vars'][i] for i in interpVar]}.")
 
     for i, time in enumerate(sat_locations['times']):
         
@@ -113,10 +122,6 @@ def extract_1d(sat_locations, model_data, extrapolate=False, verbose=False, inte
             itb4 += 1
             if itb4+1 == len(model_data['times']):
                 itb4 -= 1
-
-        if verbose:
-            print(f"->> in loop. sat time: {time}, gitmtimes: {model_data['times'][itb4]},"
-                  f"{model_data['times'][itb4+1]}")
         
         dt = (model_data["times"][itb4] - \
               model_data["times"][itb4 + 1]).total_seconds()
@@ -139,7 +144,11 @@ def extract_1d(sat_locations, model_data, extrapolate=False, verbose=False, inte
                     kAlt = nAlts-2
                     zAlt = 1.0
                 else:
-                    raise ValueError("Above model altitude domain!")
+                    raise ValueError(
+                        "Above model altitude domain!\n"
+                        f" Max 3 modeled altitudes:{np.round(alts[-3:], 2)}\n"
+                        f" Min/Max satellite altitude: "
+                        f"({round(np.min(sat_locations['alts']), 1)}/{round(np.max(sat_locations['alts']),1)})")
             else:
                 while (alts[kAlt] < sat_locations['alts'][i]):
                     kAlt = kAlt + 1
@@ -190,6 +199,9 @@ def extract_1d(sat_locations, model_data, extrapolate=False, verbose=False, inte
     for inKey in sat_locations.keys():
         if inKey not in wantAlways:
             outData['sat_' + inKey] = np.array(sat_locations[inKey])
+
+    if verbose:
+        print(f" -> Interpolation done! Returning dict with keys:\n\t{outData.keys()}")
 
     return outData
 
@@ -296,19 +308,73 @@ def orbit_average(satData, varlist=None, verbose=False):
 
     strs2ignore_smooth = ['flag','arg']
     for var in varlist:
+        dosmooth = True
         for badvar in strs2ignore_smooth:
             # If we have a variable we want to ignore...
             if badvar in var.lower():
-                continue
-
-        if verbose:
-            print("Smoothing ", var)
-        smoothed = np.zeros(len(satData['times']))
-        for i, t in enumerate(satData['times']):
-            iMin = find_index(satData['times'], t-tPeriod/2)
-            iMax = find_index(satData['times'], t+tPeriod/2)
-            s = np.mean(satData[var][iMin : iMax+1])
-            smoothed[i] = s
-        satData['smoothed_' + var] = smoothed
+                dosmooth = False
+        
+        if dosmooth:
+            if verbose:
+                print("Smoothing ", var)
+            smoothed = np.zeros(len(satData['times']))
+            for i, t in enumerate(satData['times']):
+                iMin = find_index(satData['times'], t-tPeriod/2)
+                iMax = find_index(satData['times'], t+tPeriod/2)
+                s = np.mean(satData[var][iMin : iMax+1])
+                smoothed[i] = s
+            satData['smoothed_' + var] = smoothed
 
     return satData
+
+def calc_wind_dir(lons, lats):
+
+    dlats = lats[1:] - lats[:-1]
+    dlats = np.concatenate((dlats, [dlats[-1]]))
+
+    dlons = lons[1:] - lons[:-1]
+    dlons = np.concatenate((dlons, [dlons[-1]]))
+
+    # Longitude can go across the 0 - 360 or 360 - 0 boundary, so
+    # we need to correct for this possibility:
+    
+    dlons[dlons > 180.0] = dlons[dlons > 180.0] - 360.0
+    dlons[dlons < -180.0] = dlons[dlons < -180.0] + 360.0
+
+    # Longitudes get closer together near the poles, so we need to
+    # correct for that also:
+    dlons = dlons * np.cos(lats * np.pi / 180.0)
+
+    # Make a unit vector of the direction of travel:
+    mag = np.sqrt(dlats**2 + dlons**2)
+    unitn = dlats / mag 
+    unite = dlons / mag
+
+    # Rotate the unit vector, so that it points orthogonal to the
+    # orbit plane.  This will be the actual wind vector direction:
+    uniteRot = unitn
+    unitnRot = -unite
+
+    return uniteRot, unitnRot
+
+def calc_zon_merid_wind(satDataDict, verbose=False):
+    """
+    Takes satDataDict and transforms ve/vn columns to zonal & meridional winds. Assumes
+    satellite's ve/vn are already aligned to the satellite trajectory (cross-track)
+    
+    """
+    
+    unitE, unitN = calc_wind_dir(satDataDict['lons'], satDataDict['lats'])
+
+    if 'model_Ve' and 'model_Vn' in satDataDict:
+        satDataDict['model_Ve'] = unitE * satDataDict['model_Ve']
+        satDataDict['model_Vn'] = unitN * satDataDict['model_Vn']
+    elif 'model_Vie' and 'model_Vin' in satDataDict:
+        satDataDict['model_Vie'] = unitE * satDataDict['model_Vie']
+        satDataDict['model_Vin'] = unitN * satDataDict['model_Vin']
+    else:
+        raise KeyError(
+            f"Horizontal winds not found! Found keys:\n\t{satDataDict.keys()}")
+
+    return satDataDict
+

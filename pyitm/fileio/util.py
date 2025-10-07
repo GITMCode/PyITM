@@ -170,7 +170,7 @@ def any_to_filelist(input_data=None):
 
     if isinstance(input_data, (str, os.PathLike)):
         # Single file that exists:
-        if os.path.isfile(input_data):
+        if os.path.isfile(input_data) and os.path.exists(input_data):
             return [input_data]
         # directory that exists, return all .bin files inside
         elif os.path.isdir(input_data):
@@ -195,7 +195,15 @@ def any_to_filelist(input_data=None):
 
     # we were probably given a list of files already
     else:
-        return input_data
+        # If it is only one string, send that back in here as string, not list.
+        if len(input_data) == 1:
+            # This will loop infinitely if we don't first check if that one file exists
+            if os.path.exists(input_data[0]):
+                return input_data
+            else:
+                return any_to_filelist(input_data[0])
+        else: #list of files is longer that one
+            return input_data
 
 def read_satfiles(filelist=None, satname=None, 
                   satLookup=None, startDate=None, endDate=None,
@@ -235,9 +243,9 @@ def read_satfiles(filelist=None, satname=None,
     """
 
     if satLookup is not None:
-        filelist, satnames =  lookup_satfiles(satLookup, date_start=startDate,
+        filelist, satnames = lookup_satfiles(satLookup, date_start=startDate,
                                              date_end=endDate, satname=satname,
-                                               verbose=verbose)
+                                             verbose=verbose)
     else:
         filelist = any_to_filelist(filelist)
     
@@ -246,42 +254,47 @@ def read_satfiles(filelist=None, satname=None,
 
     all_data = []
     satnames = []
+    read_files = []
     for f in filelist:
+        # Do not re-read, some files are monthly.
+        if f in read_files:
+            continue
         if verbose:
             print(f"-> Reading file: {f}")
         data = satelliteio._read_sat_one_file(f, satname=satname, verbose=verbose)
         satnames.append(data.pop('sat_name'))
         all_data.append(data)
+        read_files.append(f)
     
-    # Here we separate multiple satellites from a constellation.
-    # This has to be manual since naming conventions vary.
-    if any('dmsp' in s.lower() for s in satnames):
-        satnames = []
-        for f in filelist:
+        # Here we separate multiple satellites from a constellation.
+        # This has to be manual since naming conventions vary.
+        if 'dmsp' in satnames[-1].lower():
             # dms_20150716_18s1.001.* (or) dms_ut_20240515_18.002.hdf5
-            satnames.append('DMSP_F'+f.split('/')[-1].split('_')[-1][:2])
-    if any('grace' in s.lower() for s in satnames):
-        satnames = []
-        for f in filelist:
+            # Keep precip/density! cols are different so the reader needs to keep them separate
+            satnames[-1] = 'DMSP_F'+f.split('/')[-1].split('_')[-1][:2]+'-'+satnames[-1].split('_')[-1]
+        if 'grace' in satnames[-1].lower():
             # ga_dns_...
-            satnames.append('GRACE'+f.split('/')[-1][1])
-    
+            satnames[-1] = 'GRACE'+f.split('/')[-1][1]
+
     combined_data = {}
     unique_names = []
     for name, data in zip(satnames, all_data):
         # Make sure satellite is in combined_data
-        if name in combined_data:
-            continue
-        else:
+        if name not in combined_data:
             combined_data[name] = {}
             unique_names.append(name)
         
         # add the satellite data
         for key, value in data.items():
-            if key in combined_data[name]:
+            if key in combined_data[name].keys():
                 combined_data[name][key] = np.concatenate((combined_data[name][key], value))
             else:
                 combined_data[name][key] = value
+    
+    if verbose:
+        print(f" -> Found sat data from satellites: {combined_data.keys()}")
+        for satname in combined_data.keys():
+            print(f" --> data['{satname}'] has keys: {combined_data[satname].keys()}")
 
     return combined_data
 
@@ -311,10 +324,6 @@ def lookup_satfiles(lookup_file, date_start, date_end=None, satname=None, verbos
     list of str
         List of paths to satellite files found in the directory.
     """
-
-    # list here to add more satellite names. Case insensitive
-    sats = ['Goce', 'grace', 'gracefo', 'champ', 'swarm', 'dmsp', 'dms', 'guvi',
-            ]
 
     # deal with dates
     dates = []
@@ -364,6 +373,17 @@ def lookup_satfiles(lookup_file, date_start, date_end=None, satname=None, verbos
             sat_filenames.append('*')
     if verbose:
         print(f"-> Found {len(satnames)} entries in lookup table.")
+
+    if satname is not None:
+        if satname in satnames:
+            isat = satnames.index(satname)
+            satnames = satnames[isat]
+            sat_paths = sat_paths[isat]
+            sat_filenames = sat_filenames[isat]
+        else:
+            raise KeyError(
+                f"From lookup_satfiles '{satname}' not found!"
+                f"  Expected one of: {satnames}")
 
     satfiles_out = []
     satnames_out = []

@@ -9,7 +9,6 @@ from pyitm.fileio import variables
 from pyitm.general import time_conversion as tc
 
 from netCDF4 import Dataset
-from h5py import File
 
 class DataArray(np.ndarray):
     def __new__(cls, input_array, attrs={}):

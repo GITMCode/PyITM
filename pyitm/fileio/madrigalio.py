@@ -6,6 +6,7 @@ NetCDF4 and HDF5 files must be read differently.
 """
 
 from pyitm.general.time_conversion import epoch_to_datetime
+from pyitm.modeldata.satellite import calc_wind_dir
 import datetime
 import numpy as np
 
@@ -16,6 +17,13 @@ var_map = {'gdlat': 'lats',
            'mlong': 'mlon',
            'dtec': 'tec_error',
            'tec': 'tec',
+           'hor_ion_v': 'Vi_hor',
+           'vert_ion_v': 'Viv',
+           'el_m_ener': 'AveE',
+           'ion_m_ener': 'AveE_I',
+           'el_i_flux': 'eFlux',
+           'ion_i_flux': 'eFlux_I',
+           'ne': 'e-',
 }
 
 def _read_madrigal_one_file(filename, verbose=False):
@@ -155,7 +163,7 @@ def _read_madrigal_hdf5_file(filepath, verbose=False):
                     newname = var_map[varname.lower()] if varname.lower() in var_map else varname.lower()
                     data[newname] = f[lookup][:]
                     if verbose:
-                        print(f"-> Read variable '{varname}'->{newname} with shape {data[newname].shape}.")
+                        print(f"-> Read variable '{varname}'-> {newname} with shape {data[newname].shape}.")
                 except Exception as e:
                     if verbose:
                         print(f"-> Could not read variable '{varname}' from '{lookup}': {e}")
@@ -176,10 +184,13 @@ def _read_madrigal_hdf5_file(filepath, verbose=False):
                 varname = varname_b['mnemonic'].decode().lower()
                 newname = var_map[varname.lower()] if varname.lower() in var_map else varname.lower()
                 # Store time separately for now...
-                if varname in ['year', 'month', 'day', 'hour', 'minute', 'second']:
-                    times[varname] = f['Data/Table Layout'][varname]
-                    if verbose:
-                        print(f"-> Read time component '{varname}' with shape {times[varname].shape}.")
+                if varname in ['year', 'month', 'day', 'hour', 'minute', 'min', 'second', 'sec']:
+                    try:
+                        times[varname] = f['Data/Table Layout'][varname]
+                        if verbose:
+                            print(f"-> Read time component '{varname}' with shape {times[varname].shape}.")
+                    except KeyError:
+                        continue
                 else:
                     data[newname] = f['Data/Table Layout'][varname]
                     if verbose:
@@ -193,5 +204,29 @@ def _read_madrigal_hdf5_file(filepath, verbose=False):
                                                   times['hour'], times['minute'], times['second'])])
             if verbose:
                 print(f"-> Constructed {len(data['times'])} datetime objects for 'times' key.")
+
+        # Something else entirely! This is basically just a dict of data & is easy-ish
+        else:
+            if verbose:
+                print(f"-> Looks to be a flat file. Iterating through the columns.")
+            data = {}
+            for varname in f.keys():
+                newname = var_map[varname.lower()] if varname.lower() in var_map else varname.lower()
+                data[newname] = f[varname][:]
+
+            # Still need to clean up timestamps...
+            data['times'] = np.array([datetime.datetime(1970,1,1) 
+                                      + datetime.timedelta(seconds=dt) for dt in data.pop('timestamps')])
+            if verbose: 
+                print(f" --> Found columns: {data.keys()}")
+
+    # More cleaning!! If we found velocity, it's probably horizontal velocity
+    # Let's add a direction to it.
+    if 'Vi_hor' in data.keys():
+        uniteRot, unitnRot = calc_wind_dir(np.array(data["lons"]),
+                                           np.array(data["lats"]))
+        
+        data["Vie"] = uniteRot * data['Vi_hor']
+        data["Vin"] = unitnRot * data['Vi_hor']
 
     return data
