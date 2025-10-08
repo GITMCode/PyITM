@@ -177,6 +177,7 @@ def read_gitm_one_file(file_to_read, varlist=[-1], verbose=True):
             "data": {},
             }
 
+    print(' -> Reading GITM file: ', file_to_read)
     with open(file_to_read, 'rb') as f:
     
         # This is all reading header stuff:
