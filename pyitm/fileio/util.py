@@ -5,6 +5,7 @@ import re, os
 from glob import glob
 
 from pyitm.fileio import gitmio, netcdfio, variables, satelliteio, madrigalio
+from pyitm.modeldata import utils
 import numpy as np
 from glob import glob
 
@@ -73,13 +74,54 @@ def find_files_in_different_directory(filelist, dir):
 # ----------------------------------------------------------------------------
 # ----------------------------------------------------------------------------
 
-def read_all_files(filelist, varsToRead = None, verbose = False):
+def determine_if_tec(varsToRead):
+    isTec = False
+    if (np.isscalar(varsToRead)):
+        if (varsToRead.lower() == 'tec'):
+            isTec = True
+    else:
+        if (varsToRead[0].lower() == 'tec'):
+            isTec = True
+    return isTec
 
+# ----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
+
+def determine_if_on2(varsToRead):
+    isOn2 = False
+    if (np.isscalar(varsToRead)):
+        if (varsToRead.lower() == 'on2'):
+            isOn2 = True
+        if (varsToRead.lower() == 'o/n2'):
+            isOn2 = True
+    else:
+        if (varsToRead[0].lower() == 'on2'):
+            isOn2 = True
+        if (varsToRead[0].lower() == 'o/n2'):
+            isOn2 = True
+    return isOn2
+
+# ----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
+
+def read_all_files(filelist, varsToRead = None, verbose = False):
+    
     filelist = any_to_filelist(filelist)
     filetype = determine_filetype(filelist[0])
     header = read_all_headers(filelist[0])
     if (varsToRead == None):
         varsToRead = header['vars']
+        isTec = False
+        isOn2 = False
+    else:
+        isTec = determine_if_tec(varsToRead)
+        isOn2 = determine_if_on2(varsToRead)
+
+    if (isTec):
+        varsToRead = ['e-']
+    if (isOn2):
+        varsToRead = ['o', 'n2']
+
     if (filetype["myfile"] == filetype["iGitmBin"]):
         varsToRead = variables.convert_number_to_var(varsToRead, header)
         varsToRead = variables.get_short_names(varsToRead)
@@ -92,6 +134,10 @@ def read_all_files(filelist, varsToRead = None, verbose = False):
             allData = None
         else:
             allData = netcdfio.read_netcdf_all_files(filelist, varsToRead, verbose=verbose)
+    if (isTec):
+        tec = utils.calc_tec(allData)
+        allData['tec'] = tec
+        
     return allData
 
 # ----------------------------------------------------------------------------
@@ -205,6 +251,9 @@ def any_to_filelist(input_data=None):
         else: #list of files is longer that one
             return input_data
 
+# ----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
+
 def read_satfiles(filelist=None, satname=None, 
                   satLookup=None, startDate=None, endDate=None,
                   verbose=False):
@@ -298,7 +347,8 @@ def read_satfiles(filelist=None, satname=None,
 
     return combined_data
 
-
+# ----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
 
 def lookup_satfiles(lookup_file, date_start, date_end=None, satname=None, verbose=False):
     """
@@ -327,9 +377,14 @@ def lookup_satfiles(lookup_file, date_start, date_end=None, satname=None, verbos
 
     # deal with dates
     dates = []
+    if (verbose):
+        print('Inside lookup_satellite: ')
+        print(' -> figuring out dates: ', date_start)
     if isinstance(date_start, (datetime.datetime, datetime.date)):
         dates = [date_start]
         if date_end is not None:
+            if (verbose):
+                print('   -> end date: ', date_end)
             
             if date_end < date_start:
                 raise ValueError("date_end must be after date_start")
@@ -345,7 +400,10 @@ def lookup_satfiles(lookup_file, date_start, date_end=None, satname=None, verbos
         except:
             raise TypeError("date_start must be datetime, or date-like, or list-like")
         
-    
+
+    if (verbose):
+        print('  --> dates to search for : ', dates)
+        
     # Open the lookup table:
     with open(lookup_file, 'r') as f:
         lines = f.readlines()
@@ -375,11 +433,20 @@ def lookup_satfiles(lookup_file, date_start, date_end=None, satname=None, verbos
         print(f"-> Found {len(satnames)} entries in lookup table.")
 
     if satname is not None:
+        if verbose:
+            print('  --> Looking at satnames : ')
+            for sn in satnames:
+                print('    ', sn)
         if satname in satnames:
             isat = satnames.index(satname)
             satnames = satnames[isat]
             sat_paths = sat_paths[isat]
             sat_filenames = sat_filenames[isat]
+            if verbose:
+                print('  --> Satellite found: ', satname)
+                print('      isat : ', isat)
+                print('      sat_paths : ', sat_paths)
+                print('      sat_filenames : ', sat_filenames)
         else:
             raise KeyError(
                 f"From lookup_satfiles '{satname}' not found!"
@@ -387,18 +454,23 @@ def lookup_satfiles(lookup_file, date_start, date_end=None, satname=None, verbos
 
     satfiles_out = []
     satnames_out = []
-    for sat, sdir, sfname in zip(satnames, sat_paths, sat_filenames):
+    sat = satnames
+    sdir = sat_paths
+    sfname = sat_filenames
+    #for sat, sdir, sfname in zip(satnames, sat_paths, sat_filenames):
+    if verbose:
+        print(f"  --> Searching for files in {sdir}")
+    for eachdate in dates:
+        p = eachdate.strftime(os.path.join(sdir, sfname))
         if verbose:
-            print(f"-> Searching for files in {sdir}")
-        for eachdate in dates:
-            p = eachdate.strftime(os.path.join(sdir, sfname))
-            days_files = sorted(glob(p))
-            if verbose:
-                print(f"--> Found {len(days_files)} files for {eachdate}")
-            if len(days_files) == 0:
-                continue
-            # append to satfiles, making sure it is 1D
-            satfiles_out = satfiles_out + days_files
-            satnames_out = satnames_out + [sat]*len(days_files)
+            print('  --> search path : ', p)
+        days_files = sorted(glob(p))
+        if verbose:
+            print(f"   --> Found {len(days_files)} files for {eachdate}")
+        if len(days_files) == 0:
+            continue
+        # append to satfiles, making sure it is 1D
+        satfiles_out = satfiles_out + days_files
+        satnames_out = satnames_out + [sat]*len(days_files)
 
     return satfiles_out, satnames_out
