@@ -116,21 +116,21 @@ if __name__ == '__main__':
         if (iT == iTimes[0]):
             tecInfo = {'times': ts,
                        'tec': tecSave,
-                       'iStart': [0],
-                       'iEnd': [nPts],
                        'lons': lons,
                        'lats': lats,
                        'alts': alts}
+            tecLocs = {'iStart': [0],
+                       'iEnd': [nPts]}
         else:
             tecInfo['times'] = np.concatenate((tecInfo['times'], ts))
             tecInfo['tec'] = np.concatenate((tecInfo['tec'], tecSave))
             tecInfo['lons'] = np.concatenate((tecInfo['lons'], lons))
             tecInfo['lats'] = np.concatenate((tecInfo['lats'], lats))
             tecInfo['alts'] = np.concatenate((tecInfo['alts'], alts))
-            tecInfo['iStart'].append(tecInfo['iEnd'][-1])
-            tecInfo['iEnd'].append(len(tecInfo['times']))
+            tecLocs['iStart'].append(tecLocs['iEnd'][-1])
+            tecLocs['iEnd'].append(len(tecInfo['times']))
             
-
+    
     gitmTEC = satellite.extract_1d(tecInfo, gitmData, extrapolate=False, verbose=verbose, interpVar=[0])
 
     dataMinMax = plotutils.get_min_max_data(tecInfo['tec'], None, \
@@ -154,8 +154,8 @@ if __name__ == '__main__':
     for iT in range(len(iTimes)):
 
         # Get the data:
-        iS = tecInfo['iStart'][iT]
-        iE = tecInfo['iEnd'][iT]
+        iS = tecLocs['iStart'][iT]
+        iE = tecLocs['iEnd'][iT]
         lons = tecInfo['lons'][iS:iE]
         lats = tecInfo['lats'][iS:iE]
         tecData = tecInfo['tec'][iS:iE]
