@@ -31,7 +31,8 @@ var_map = {'gdlat': 'lats',
 
 def _read_madrigal_one_file(filename, verbose=False):
     """
-    Read a single Madrigal file, either netCDF or HDF5.
+    Read a single Madrigal file, either netCDF or HDF5. This only reads a single file.
+    Use pyitm.fileio.util.read_satfiles to read multiple files.
 
     Parameters
     ----------
@@ -56,7 +57,8 @@ def _read_madrigal_one_file(filename, verbose=False):
     
 def _read_madrigal_nc_file(filepath, verbose=False):
     """
-    Read a Madrigal netCDF file. 
+    Read a Madrigal netCDF file. This is called automatically from
+      '_read_madrigal_one_file' if the filetype is .nc
 
     Parameters
     ----------
@@ -108,7 +110,8 @@ def extrainfo(v):
 
 def _read_madrigal_hdf5_file(filepath, verbose=False):
     """
-    Read data from a Madrigal HDF5 file.
+    Read data from a Madrigal HDF5 file. This is called automatically from
+      '_read_madrigal_one_file' if the filetype is .hdf5 or .h5
 
     Parameters
     ----------
