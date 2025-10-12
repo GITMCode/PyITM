@@ -393,7 +393,7 @@ def write_out_data(satDataDict, savepath, varname, satName, verbose=False):
             
 
 
-def main(satfiles, modeldatapath, vars2plot=3, satNames=None, sat_lookup=None,
+def main(satfiles, modeldatapath, vars2plot=None, satNames=None, sat_lookup=None,
          isWind=False,
          saveData=True, savePlot=True, savePath='./',
          verbose=False):
@@ -430,32 +430,42 @@ def main(satfiles, modeldatapath, vars2plot=3, satNames=None, sat_lookup=None,
     
     print(f"Found data from satellites: {list(satData.keys())}.")
 
-    # If we're plotting winds, only read ve/vn from model data:
+    if vars2plot is not None:
+        # Leave empty if nothing is specified...
+        wantVars = variables.match_var_name(vars2plot, header0)
+    else:
+        wantVars = []
+
+    # If we're plotting winds, only read ve/vn & vie/vin from model data:
     if isWind:
-        vars2plot = []
-        # 2 versions of this - one for us to iterate over later, one to tell the reader what to read
         winds2plot = []
         # Check if we have neutral winds...
-        neutralwind = False
-        ionwind = False #weird name
+        haveneutralwind = False
+        haveionwind = False # weird name
         for satname in satData.keys():
-            if 'Ve' in satData[satname].keys() and 'Ve' in satData[satname].keys():
-                neutralwind = True
-            if 'Vie' in satData[satname].keys() and 'Vie' in satData[satname].keys():
-                ionwind = True
-        if neutralwind:
-            winds2plot.append(['Ve', 'Vn'])
-            vars2plot.extend(['Ve', 'Vn'])
-        if ionwind:
-            winds2plot.append(['Vie', 'Vin'])
-            vars2plot.extend(['Vie', 'Vin'])
+            if 'Ve' in satData[satname].keys() and 'Vn' in satData[satname].keys():
+                haveneutralwind = True
+            if 'Vie' in satData[satname].keys() and 'Vin' in satData[satname].keys():
+                haveionwind = True
+        
+        if haveneutralwind:
+            winds2plot.extend([i for i in ['Ve', 'Vn'] if i in wantVars or wantVars == []])
+        
+        if haveionwind:
+            winds2plot.extend([i for i in ['Vie', 'Vin'] if i in wantVars or wantVars == []])
+        
+        if wantVars == []:
+            # Plot everything we have
+            vars2plot = winds2plot
+        else:
+            # plot wnat's requested 
+            vars2plot = [i for i in wantVars if i in winds2plot]
 
     # Read in the first model data file, which allows the model reader to handle the
     # variable name remapping instead of us. Allows for more flexibility with TEC or
     # multple models.
     modelt0 = read_all_files(model_filelist[0], varsToRead=vars2plot, verbose=verbose)
     varnames = modelt0['shortname']
-    # varnames.extend(modelt0['vars'])
 
     vars_found = []
 
