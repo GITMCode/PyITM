@@ -118,11 +118,11 @@ def extract_1d(sat_locations, model_data, interpVar=None,
 
     for i, time in enumerate(sat_locations['times']):
         
-        if model_data['times'][itb4 + 1] <= time:
+        while model_data['times'][itb4 + 1] <= time:
             itb4 += 1
             if itb4+1 == len(model_data['times']):
-                itb4 -= 1
-        
+                raise ValueError("TIME ERROR!! Try running with verbose")
+            
         dt = (model_data["times"][itb4] - \
               model_data["times"][itb4 + 1]).total_seconds()
         xt = (time - model_data["times"][itb4]).total_seconds() / dt

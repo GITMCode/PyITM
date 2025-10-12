@@ -414,10 +414,9 @@ def main(satfiles, modeldatapath, vars2plot=None, satNames=None, sat_lookup=None
     header0 = read_all_headers(model_filelist[0], verbose=verbose)
     header1 = read_all_headers(model_filelist[-1], verbose=verbose)
     # And we need the dates to read in satellite files!
-    date0, date1 = header0['times'][0], header1['times'][-1]
+    date0, date1 = header0['times'][0], header1['times'][0]
     if verbose:
-        print(f"Model data ranges from {date0} to {date1}")
-
+        print(f" -> Model data start/end dates: {date0.date()} / {date1.date()}")
     # Read in satellite data
     print("Reading in satellite data...")
 
