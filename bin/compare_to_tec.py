@@ -45,6 +45,15 @@ def get_args():
 
     return args
 
+# ----------------------------------------------------------------------------
+# Need a weighted average
+# ----------------------------------------------------------------------------
+
+def weighted_mean(var, weights):
+    top = np.sum(var * weights)
+    bot = np.sum(weights)
+    ave = top / bot
+    return ave
 
 # ----------------------------------------------------------------------------
 # Needed to run main script as the default executable from the command line
@@ -161,13 +170,15 @@ if __name__ == '__main__':
         tecData = tecInfo['tec'][iS:iE]
         tecGitm = gitmTEC['model_tec'][iS:iE]
         # Calculate some quantities to save:
-        globalRms[iT] = np.sqrt(np.mean( (tecData - tecGitm)**2))
-        globalDiff[iT] = np.mean(tecData - tecGitm)
-        globalTecMean[iT] = np.mean(tecData)
-        globalModelMean[iT] = np.mean(tecGitm)
+        weights = np.cos(lats * np.pi/180.0)
+        ave = weighted_mean((tecData - tecGitm)**2, weights):
+        globalRms[iT] = np.sqrt(ave)
+        globalDiff[iT] = weighted_mean(tecData - tecGitm, weights)
+        globalTecMean[iT] = weighted_mean(tecData, weights)
+        globalModelMean[iT] = weighted_mean(tecGitm, weights)
         globalTecMedian[iT] = np.median(tecData)
         globalModelMedian[iT] = np.median(tecGitm)
-        globalnRms[iT] = globalRms[iT] / np.mean(tecData)
+        globalnRms[iT] = globalRms[iT] / globalTecMean[iT]
 
         if (not args.nomaps):
         
@@ -210,6 +221,7 @@ if __name__ == '__main__':
         # Focus on the American sector and make some data there:
         centerLon = 285
         dLon = 15.0
+        americanWeights = np.zeros(nLats)
         for iL, lat in enumerate(lats1d):
             # hack, in two steps:
             dlats = np.abs(lats - lat)
@@ -224,12 +236,16 @@ if __name__ == '__main__':
                         np.mean(dataSmall[dlons <= dLon])
                     americanCutModel[iT, iL] = \
                         np.mean(modelSmall[dlons <= dLon])
-        americanRms[iT] = \
-            np.sqrt(np.mean( (americanCutData[iT, :] - americanCutModel[iT, :])**2))
-        americanDiff[iT] = np.mean(americanCutData[iT, :] - americanCutModel[iT, :])
-        americanTecMean[iT] = np.mean(americanCutData[iT, :])
-        americanModelMean[iT] = np.mean(americanCutModel[iT, :])
-        americannRms[iT] = globalRms[iT] / np.mean(americanCutData[iT, :])
+                    americanWeights[iL] = len(dataSmall[dlons <= dLon]) * np.cos(lat * np.pi / 180.0)
+        ave = weighted_mean((americanCutData[iT, :] - americanCutModel[iT, :])**2, americanWeights)
+        americanRms[iT] = np.sqrt(ave)
+        americanDiff[iT] = \
+            weighted_mean(americanCutData[iT, :] - americanCutModel[iT, :], americanWeights)
+        americanTecMean[iT] = \
+            weighted_mean(americanCutData[iT, :], americanWeights)
+        americanModelMean[iT] = \
+            weighted_mean(americanCutModel[iT, :], americanWeights)
+        americannRms[iT] = globalRms[iT] / americanTecMean[iT]
     
     # Plot stuff in the american sector:
     l2d, t2d = np.meshgrid(lats1d, gitmData['times'])
