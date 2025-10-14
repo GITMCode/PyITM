@@ -118,7 +118,7 @@ def plot_cubesphere(args, allData):
 
     allSlices = utils.data_slice(allData, iAlt = iAlt)
     varName = allData['longname'][0]
-    sVarNum = variables.strip_varname(allData['shortname'][0]) + '_'
+    sVarNum = allData['shortname'][0] + '_'
     sAltNum = 'alt%04d_' % int(realAlt)
 
     allTimes = allData['times']
@@ -144,7 +144,8 @@ def plot_cubesphere(args, allData):
                                            titleAddOn = sTitleAdd,
                                            filenamePrefix = sFilePre,
                                            xLimits = [args.lonmin, args.lonmax],
-                                           yLimits = [args.latmin, args.latmax])
+                                           yLimits = [args.latmin, args.latmax],
+                                           forcePolar = True)
 
 # Needed to run main script as the default executable from the command line
 if __name__ == '__main__':
