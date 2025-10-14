@@ -271,8 +271,6 @@ def data_slice(allData3D, iLon = -1, iLat = -1, iAlt = -1):
     nAlts = allData3D['nalts']
     nBlocks = allData3D['nblocks']
 
-    print(nTimes, nVars, nBlocks, nLons, nLats, nAlts)
-    
     doAltCut = False
     altArray = False
     if (np.isscalar(iAlt)):
