@@ -286,12 +286,15 @@ def plot_series_of_slices_wblocks(allSlices,
                                   xLimits = [0, 0],
                                   yLimits = [0, 0],
                                   doScatter = False,
+                                  forcePolar = False,
                                   dpi = 120):
 
     nBlocks, nX, nY = np.shape(lonPos3d)
     
     isUniform = utils.calc_if_uniform_grid(lonPos3d, latPos3d)
-
+    if (forcePolar):
+        isUniform = False
+    
     if (isUniform):
         print('  -> Seems to be a uniform grid, with blocks!')
 
@@ -333,7 +336,7 @@ def plot_series_of_slices_wblocks(allSlices,
                                  vmin = dataMinMax['mini'], \
                                  vmax = dataMinMax['maxi'])
 
-                if (np.mean(lat2d) > 45.0):
+                if ((np.mean(lat2d) > 45.0) and (not isUniform)):
                     whichPole = 'North'
                     cbar_label = ''
                     polar.plot_polar_region(fig, ax2, lon2d, lat2d, values2d,
@@ -342,7 +345,7 @@ def plot_series_of_slices_wblocks(allSlices,
                                             dataMinMax['maxi'],
                                             dataMinMax['cmap'],
                                             title = '', cbar_label = '')
-                if (np.mean(lat2d) < -45.0):
+                if ((np.mean(lat2d) < -45.0) and (not isUniform)):
                     whichPole = 'South'
                     cbar_label = ''
                     polar.plot_polar_region(fig, ax3, lon2d, lat2d, values2d,
