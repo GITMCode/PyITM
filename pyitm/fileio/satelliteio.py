@@ -1,43 +1,17 @@
 import numpy as np
 from datetime import datetime
+from pyitm.fileio import madrigalio
+from pyitm.modeldata.satellite import calc_wind_dir
 
-def calc_wind_dir(lons, lats):
 
-    dlats = lats[1:] - lats[:-1]
-    dlats = np.concatenate((dlats, [dlats[-1]]))
-
-    dlons = lons[1:] - lons[:-1]
-    dlons = np.concatenate((dlons, [dlons[-1]]))
-
-    # Longitude can go across the 0 - 360 or 360 - 0 boundary, so
-    # we need to correct for this possibility:
-    
-    dlons[dlons > 180.0] = dlons[dlons > 180.0] - 360.0
-    dlons[dlons < -180.0] = dlons[dlons < -180.0] + 360.0
-
-    # Longitudes get closer together near the poles, so we need to
-    # correct for that also:
-    dlons = dlons * np.cos(lats * np.pi / 180.0)
-
-    # Make a unit vector of the direction of travel:
-    mag = np.sqrt(dlats**2 + dlons**2)
-    unitn = dlats / mag 
-    unite = dlons / mag
-
-    # Rotate the unit vector, so that it points orthogonal to the
-    # orbit plane.  This will be the actual wind vector direction:
-    uniteRot = unitn
-    unitnRot = -unite
-
-    return uniteRot, unitnRot
-
-def _read_goce(file):
+def _read_goce(file, verbose=False):
     """
     Read a GOCE file
 
     Inputs
     ------
         file (str) - Path to GOCE file
+        verbose (bool) - print extra info? Default=False
 
     Returns
     -------
@@ -51,37 +25,43 @@ def _read_goce(file):
     data["lats"] = []
     data["lons"] = []
     data["lst"] = []
-    data["density"] = []
+    data["rho"] = []
     data["Ve"] = []
     data["Vn"] = []
-    data["Vr"] = []
-    data["densityError"] = []
+    data["Vv"] = []
+    data["rhoError"] = []
     data["windError"] = []
     data["FlagOver"] = []
     data["FlagEclipse"] = []
     data["FlagAD"] = []
     data["FlagThuster"] = []
 
-    f = open(file, 'r')
+    if verbose:
+        print(f" -> read_goce: Opening {file}")
 
-    for line in f:
+    f = open(file, 'r')
+    badlines = []
+    for n, line in enumerate(f):
 
         if (line.find('#') < 0):
             items = line.split()
             ymd = items[0].split('-')
             hms = items[1].split(':')
             s = float(hms[2])
+            if len(items) != 18:
+                badlines.append(n)
+                continue
             data["times"].append(datetime(int(ymd[0]),int(ymd[1]),int(ymd[2]),
                                          int(hms[0]),int(hms[1]),int(s)))
             data["alts"].append(float(items[3])/1000.0)
             data["lons"].append(float(items[4]))
             data["lats"].append(float(items[5]))
             data["lst"].append(float(items[6]))
-            data["density"].append(float(items[8]))
+            data["rho"].append(float(items[8]))
             data["Ve"].append(float(items[9]))
             data["Vn"].append(float(items[10]))
-            data["Vr"].append(float(items[11]))
-            data["densityError"].append(float(items[12]))
+            data["Vv"].append(float(items[11]))
+            data["rhoError"].append(float(items[12]))
             data["windError"].append(float(items[13]))
             data["FlagOver"].append(int(items[14]))
             data["FlagEclipse"].append(int(items[15]))
@@ -89,6 +69,8 @@ def _read_goce(file):
             data["FlagThuster"].append(int(items[17]))
 
     f.close()
+    if len(badlines) > 1:
+        print(f"Skipped {len(badlines)} lines in GOCE file {file}")
 
     # Here we are calculating the direction of travel of the sat:
 
@@ -104,13 +86,14 @@ def _read_goce(file):
 # Read CHAMP data
 #-----------------------------------------------------------------------------
 
-def _read_champ(file):
+def _read_champ(file, verbose=False):
     """
     Read a CHAMP file
 
     Inputs
     ------
         file (str) - Path to CHAMP file
+        verbose (bool) - print extra info? Default=False
 
     Returns
     -------
@@ -124,7 +107,10 @@ def _read_champ(file):
     data["lats"] = []
     data["lons"] = []
     data["lst"] = []
-    data["density"] = []
+    data["rho"] = []
+
+    if verbose:
+        print(f" -> read_champ: Opening {file}")
 
     f = open(file, 'r')
 
@@ -141,19 +127,20 @@ def _read_champ(file):
             data["lons"].append( (float(items[4])+360.0) % 360.0 )
             data["lats"].append(float(items[5]))
             data["lst"].append(float(items[6]))
-            data["density"].append(float(items[8]))
+            data["rho"].append(float(items[8]))
 
     f.close()
 
     return data
 
-def _read_grace(file):
+def _read_grace(file, verbose=False):
     """
     Read a GRACE/GRACE-FO file
 
     Inputs
     ------
         file (str) - Path to GRACE file
+        verbose (bool) - print extra info? Default=False
 
     Returns
     -------
@@ -168,9 +155,13 @@ def _read_grace(file):
     data["lons"] = []
     data["lst"] = []
     data["arglat"] = []
-    data["density_mean"] = []
-    data["density_flag"] = []
-    data["density_mean_flag"] = []
+    data["rho"] = []
+    data["rho_mean"] = []
+    data["rho_flag"] = []
+    data["rho_mean_flag"] = []
+
+    if verbose:
+        print(f" -> read_grace (no wind): Opening {file}")
 
     f = open(file, 'r')
 
@@ -183,15 +174,15 @@ def _read_grace(file):
             s = float(hms[2])
             data["times"].append(datetime(int(ymd[0]),int(ymd[1]),int(ymd[2]),
                                          int(hms[0]),int(hms[1]),int(s)))
-            data["alts"].append(float(items[4])/1000.0)
-            data["lons"].append( (float(items[5])+360.0) % 360.0 )
-            data["lats"].append(float(items[6]))
-            data["lst"].append(float(items[7]))
-            data["arglat"].append(float(items[8]))
-            data["density"].append(float(items[9]))
-            data["density_mean"].append(float(items[10]))
-            data["density_flag"].append(float(items[11]))
-            data["density_mean_flag"].append(float(items[12]))
+            data["alts"].append(float(items[3])/1000.0)
+            data["lons"].append( (float(items[4])+360.0) % 360.0 )
+            data["lats"].append(float(items[5]))
+            data["lst"].append(float(items[6]))
+            data["arglat"].append(float(items[7]))
+            data["rho"].append(float(items[8]))
+            data["rho_mean"].append(float(items[9]))
+            data["rho_flag"].append(float(items[10]))
+            data["rho_mean_flag"].append(float(items[11]))
 
     f.close()
 
@@ -205,12 +196,14 @@ def _read_grace_winds(file):
     Inputs
     ------
         file (str) - Path to GRACE file
+        verbose (bool) - print extra info? Default=False
 
     Returns
     -------
         (dict) - GRACE data. 
-            - crosswind_speed is the magnitude
-            - Uv is unit vector in each of the 3 directions
+            - V_mag is the magnitude
+            - Vn/Ve/Vv=V_north/east/vertical: velocity in each of the 3 corss-track
+            directions
     
     """
     
@@ -221,11 +214,14 @@ def _read_grace_winds(file):
     data["lons"] = []
     data["lst"] = []
     data["arglat"] = []
-    data["crosswind_speed"] = []
-    data["uVnorth"] = []
-    data["uVeast"] = []
-    data["uVdown"] = []
+    data["V_mag"] = []
+    data["Vn"] = []
+    data["Ve"] = []
+    data["Vv"] = []
     data["validity_flag"] = []
+
+    if verbose:
+        print(f" -> read_grace_winds: Opening {file}")
 
     f = open(file, 'r')
 
@@ -243,26 +239,31 @@ def _read_grace_winds(file):
             data["lats"].append(float(items[6]))
             data["lst"].append(float(items[7]))
             data["arglat"].append(float(items[8]))
-            data["crosswind_speed"].append(float(items[9]))
-            data["uVnorth"].append(float(items[10]))
-            data["uVeast"].append(float(items[11]))
-            data["uVdown"].append(float(items[12]))
+            data["V_mag"].append(float(items[9]))
+            data["Vn"].append(float(items[10]))
+            data["Ve"].append(float(items[11]))
+            data["Vv"].append(float(items[12]))
             data["validity_flag"].append(float(items[12]))
 
     f.close()
+
+    data['Vn'] = np.array(data['Vn']) * np.array(data['V_mag'])
+    data['Ve'] = np.array(data['Ve']) * np.array(data['V_mag'])
+    data['Vv'] = np.array(data['Vv']) * np.array(data['V_mag'])
 
     return data
 
 
 
 
-def _read_champ_winds(file):
+def _read_champ_winds(file, verbose=False):
     """
     Read a CHAMP wind file
 
     Parameters
     ----------
         file (str) - Path to CHAMP file
+        verbose (bool) - print extra info? Default=False
 
     Returns
     -------
@@ -278,8 +279,11 @@ def _read_champ_winds(file):
     data["lst"] = []
     data["Ve"] = []
     data["Vn"] = []
-    data["Vr"] = []
-    data["density"] = []
+    data["Vv"] = []
+    data["quality_flag"] = []
+
+    if verbose:
+        print(f" -> read_champ_winds: Opening {file}")
 
     f = open(file, 'r')
 
@@ -298,6 +302,8 @@ def _read_champ_winds(file):
             data["lst"].append(float(items[6]))
             data["Ve"].append(float(items[8]))
             data["Vn"].append(float(items[9]))
+            data["Vv"].append(float(items[10]))
+            data["quality_flag"].append(float(items[12]))
 
     f.close()
 
@@ -312,9 +318,10 @@ def _read_champ_winds(file):
     return data
 
 
-def read_sat_file(filename:str, satname=None, verbose=False):
+
+def _read_sat_one_file(filename:str, satname=None, verbose=False):
     """
-    Generic reader for any satellite file.
+    Generic reader for any satellite file. Called from util.read_satfiles.
 
     Will infer satellite name and use the correct reader
 
@@ -347,12 +354,21 @@ def read_sat_file(filename:str, satname=None, verbose=False):
     satreaders = {'grace_density': _read_grace,
                   'grace_wind': _read_grace_winds,
                   'goce': _read_goce,
-                  'champ': _read_champ}
+                  'champ': _read_champ,
+                  'dmsp_precipitation': madrigalio._read_madrigal_one_file,
+                  'dmsp_density': madrigalio._read_madrigal_one_file,
+                  'dmsp_utd': madrigalio._read_madrigal_one_file,
+                  'gps': madrigalio._read_madrigal_one_file,
+                  }
     # satellite name & patterns that should be checked against filename
     satlookup = {'goce': ['go'],
                  'champ': ['ch'],
                  'grace_density': ['gr_dns', 'ga_dns', 'gb_dns', 'gc_dns'],
                  'grace_wind': ['gr_wnd', 'ga_wnd', 'gb_wnd', 'gc_wnd'],
+                 'dmsp_precipitation': ['e.001.hdf5', 'e.001.nc'], # format is dms_[date]_#_e...
+                 'dmsp_density': ['s1.001.hdf5', 's1.001.nc'], # format is dms_[date]_#_s1...
+                 'dmsp_utd': ['dms_ut_', ], # dms_ut_20240515_##.002.hdf5
+                 'gps': ['gps'], # gps110806g.003.hdf5
                  }
 
     if satname is None:
@@ -371,17 +387,15 @@ def read_sat_file(filename:str, satname=None, verbose=False):
                 if pattern in sat_filename:
                     satnames.append(name)
                     if verbose:
-                        print(f"Match for {filename} found as {pattern}: {name}")
+                        print(f"Match for {filename} found with '{pattern}': {name}")
 
         if len(satnames) > 1:
-            raise ValueError(
-                f"Satellite file {filename} matches {satnames}. "
-                "Maybe pass satellite name manually")
+            print(f"Satellite file {filename} matches {satnames}. "
+                  "Maybe pass satellite name manually? Using first reader: {satnames[0]}")
         elif len(satnames) < 1:
             raise ValueError(f"No reader found for satellite file: '{filename}'\n"
                              f"\t>> Supported satnames are: {list(satreaders.keys())}")
-        else:
-            satName = satnames[0]
+        satName = satnames[0]
     else:
         # We were handed a name. Try using the reader
         satName = satname.lower()
@@ -394,7 +408,7 @@ def read_sat_file(filename:str, satname=None, verbose=False):
             print(f"Attempting to read {filename} with reader for {satName}")
 
     # Dispatch the reader based on the inferred name:
-    satData = satreaders[satName](filename)
+    satData = satreaders[satName](filename, verbose=verbose)
     satData['sat_name'] = satName
 
     return satData

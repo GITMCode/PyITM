@@ -6,7 +6,31 @@
 import datetime as dt
 import numpy as np
 
-def epoch_to_datetime(epoch_time):
+#-----------------------------------------------------------------------------
+# 
+#-----------------------------------------------------------------------------
+
+def find_closest_times(searchTimes, desiredTimes):
+    """search the array searchTimes for the 
+       desiredTimes and return a list of indices.
+       This is not an optimized solution at all.
+    """
+    if (np.isscalar(desiredTimes)):
+        desiredTimes = [desiredTimes]
+    iTimes = []
+    nSearchTimes = len(searchTimes)
+    dt = np.zeros(nSearchTimes)
+    for time in desiredTimes:
+        for iT in range(nSearchTimes):
+            dt[iT] = np.abs((searchTimes[iT] - time).total_seconds())
+        iTimes.append(np.argmin(dt))
+    return iTimes
+    
+#-----------------------------------------------------------------------------
+# 
+#-----------------------------------------------------------------------------
+
+def epoch_to_datetime(epoch_time, t0 = dt.datetime(1965, 1, 1)):
     """Convert from epoch seconds to datetime.
 
     Parameters
@@ -24,11 +48,18 @@ def epoch_to_datetime(epoch_time):
     Epoch starts at 1 Jan 1965.
 
     """
-
-    dtime = dt.datetime(1965, 1, 1) + dt.timedelta(seconds=epoch_time)
+    try:
+        dtime = t0 + dt.timedelta(seconds=epoch_time)
+    except TypeError:
+        # Maybe it's an array of epoch times
+        dtime = np.array([t0 + dt.timedelta(seconds=et) for et in epoch_time])
 
     return dtime
 
+
+#-----------------------------------------------------------------------------
+# 
+#-----------------------------------------------------------------------------
 
 def datetime_to_epoch(dtime):
     """Convert datetime to epoch seconds.
@@ -49,6 +80,10 @@ def datetime_to_epoch(dtime):
 
     return epoch_time
 
+
+#-----------------------------------------------------------------------------
+# 
+#-----------------------------------------------------------------------------
 
 def ut_to_lt(time_array, glon):
     """Compute local time from date and longitude.
@@ -75,7 +110,10 @@ def ut_to_lt(time_array, glon):
 
     """
 
-    time_array = np.asarray(time_array)
+    if isinstance(time_array, dt.datetime):
+        # put single time into a list
+        time_array = [time_array]
+    time_array = np.asarray(time_array, dtype=dt.datetime)
     glon = np.asarray(glon)
 
     # Get UT seconds of day
@@ -97,6 +135,10 @@ def ut_to_lt(time_array, glon):
 
     return lt
 
+
+#-----------------------------------------------------------------------------
+# 
+#-----------------------------------------------------------------------------
 
 def lt_to_ut(lt, glon):
     """Compute universal time in hours from local time and longitude.
@@ -127,6 +169,10 @@ def lt_to_ut(lt, glon):
 
     return uth
 
+
+#-----------------------------------------------------------------------------
+# 
+#-----------------------------------------------------------------------------
 
 def calc_time_shift(utime):
     """Calculate the time shift needed to orient a polar dial.

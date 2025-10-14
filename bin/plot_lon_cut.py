@@ -55,7 +55,15 @@ def get_args():
     parser.add_argument('-list',  \
                         action='store_true', default = False, \
                         help = 'list variables in file')
-    
+
+    # directory to use as a background, so you can subtract one run from another
+    parser.add_argument('-backdir',  \
+                        default = '', \
+                        help = 'background directory to subtract off')
+    parser.add_argument('-percent',  \
+                        action='store_true', default = False, \
+                        help = 'plot percent different (if backdir specified)')
+
     # Get the files to plot:
     parser.add_argument('filelist', nargs='+', \
                         help = 'list files to use for generating plots')
@@ -63,6 +71,10 @@ def get_args():
     args = parser.parse_args()
 
     return args
+
+# -----------------------------------------------------------------------------
+# Plot, assuming no blocks, just a nice sphere
+# -----------------------------------------------------------------------------
 
 def plot_lon_cut_noblocks(args, allData):
 
@@ -89,14 +101,22 @@ def plot_lon_cut_noblocks(args, allData):
     varName = allData['longname'][0]
     sVarNum = allData['shortname'][0] + '_'
     
+    if (args.lon < 0):
+        sLonNum = 'lonZave_'
+    else:
+        sLonNum = 'lon%04d_' % int(realLon)
+
+    if (len(args.backdir) > 0):
+        sLonNum = sLonNum + 'diff_'
+        if (args.percent):
+            varName = varName + ' (Per. Diff.)'
+        else:
+            varName = varName + ' (Diff.)'
+
     if (args.log):
         allSlices = np.log10(allSlices)
         varName = 'log10(' + varName + ')'
-        
-    if (args.lon < 0):
-        sLonNum = 'lonZave'
-    else:
-        sLonNum = 'lon%04d_' % int(realLon)
+        sLonNum = sLonNum + 'log_'
 
     allTimes = allData['times']
 
@@ -104,7 +124,8 @@ def plot_lon_cut_noblocks(args, allData):
     dataMinMax = plotutils.get_min_max_data(allSlices, alts1d, \
                      yMin = args.altmin, yMax = args.altmax, \
                      color = 'red', \
-                     minVal = 1e32, maxVal = -1e32)
+                     minVal = args.mini, maxVal = args.maxi,
+                     isLog = args.log)
 
     dpi = 120
 
@@ -136,9 +157,12 @@ def plot_lon_cut_noblocks(args, allData):
         print(" ==> Writing file : ", outFile)
         fig.savefig(outFile, dpi = dpi)
         plt.close(fig)
-    
-    
+        
     return
+
+# -----------------------------------------------------------------------------
+# plot with a bunch of different blocks
+# -----------------------------------------------------------------------------
 
 def plot_lon_cut_wblocks(args, allData):
 
@@ -159,20 +183,23 @@ def plot_lon_cut_wblocks(args, allData):
             realLon = -1.0
             iLon = -1
 
-
     allSlices = utils.data_slice(allData, iLon = iLon)
 
     varName = allData['longname'][0]
     sVarNum = allData['shortname'][0] + '_'
-    
+        
+    if (args.lon < 0):
+        sLonNum = 'lonZave_'
+    else:
+        sLonNum = 'lon%04d_' % int(realLon)
+
     if (args.log):
         allSlices = np.log10(allSlices)
         varName = 'log10(' + varName + ')'
-        
-    if (args.lon < 0):
-        sLonNum = 'lonZave'
-    else:
-        sLonNum = 'lon%04d_' % int(realLon)
+        sLonNum = sLonNum + 'log_'
+
+    if (len(args.backdir) > 0):
+        sLonNum = sLonNum + 'diff_'
 
     allTimes = allData['times']
 
@@ -218,11 +245,13 @@ def plot_lon_cut_wblocks(args, allData):
         fig.savefig(outFile, dpi = dpi)
         plt.close(fig)
     
-    
     return
 
 
+# -----------------------------------------------------------------------------
 # Needed to run main script as the default executable from the command line
+# -----------------------------------------------------------------------------
+
 if __name__ == '__main__':
 
     # Get the input arguments
@@ -230,7 +259,12 @@ if __name__ == '__main__':
     filelist = args.filelist
     varToPlot = args.var
 
-    allData = util.read_all_files(filelist, varToPlot)
+    allData = util.read_all_files(filelist, varToPlot, verbose = True)
+
+    if (len(args.backdir) > 0):
+        backfiles = util.find_files_in_different_directory(filelist, dir = args.backdir)
+        allBackground = util.read_all_files(backfiles, varToPlot, verbose = True)
+        allData = utils.subtract_all_slices(allData, allBackground, percent = args.percent)
 
     if (allData['nblocks'] == 0):
         plot_lon_cut_noblocks(args, allData)

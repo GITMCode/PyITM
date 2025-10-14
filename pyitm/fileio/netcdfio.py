@@ -9,7 +9,6 @@ from pyitm.fileio import variables
 from pyitm.general import time_conversion as tc
 
 from netCDF4 import Dataset
-from h5py import File
 
 class DataArray(np.ndarray):
     def __new__(cls, input_array, attrs={}):
@@ -74,10 +73,12 @@ def read_netcdf_one_file(filename, file_vars = None, verbose = False):
     #       updated package structure is confirmed
     # Initialize data dict with defaults (will remove these defaults later)
     data = {'filename': filename,
-            'units': '',
+            'units': {},
             'long_name': None}
+    
+    if verbose:
+        print('-> Reading netcdf : ', filename, ' --> Vars : ', file_vars)
 
-    print('-> Reading netcdf : ', filename, ' --> Vars : ', file_vars)
     with Dataset(filename, 'r') as ncfile:
         # Process header information: nlons, nlats, nalts, nblocks
         data['nlons'] = len(ncfile.dimensions['lon'])
@@ -96,9 +97,18 @@ def read_netcdf_one_file(filename, file_vars = None, verbose = False):
         for key in data['vars']:
             var = ncfile.variables[key]  # key is var name
             data[key] = DataArray(np.array(var), var.__dict__)
+            data['units'][key] = var.units if 'units' in var.__dict__ else ''
+
+        if 'since' in ncfile.variables['time'].units:
+            t0 = ncfile.variables['time'].units.split('since')[-1].strip()
+            t0 = datetime.strptime(t0, '%Y-%m-%d')
+            if verbose:
+                print('   -> Time conversion using t0 = ', t0)
+        else:
+            t0 = datetime(1965, 1, 1)
 
         data['times'] = \
-            tc.epoch_to_datetime(np.array(ncfile.variables['time'])[0])
+            tc.epoch_to_datetime(np.array(ncfile.variables['time'])[0], t0=t0)
 
         try:
             data['isEnsemble'] = True if ncfile.isEnsemble == "True" else False
@@ -187,9 +197,15 @@ def read_netcdf_one_header(filename):
                                                 'long_name'))
                 else:
                     data['longname'].append(key)
-
+        
+        if 'since' in ncfile.variables['time'].units:
+            t0 = ncfile.variables['time'].units.split('since')[-1].strip()
+            t0 = datetime.strptime(t0, '%Y-%m-%d')
+            
+        else:
+            t0 = datetime(1965, 1, 1)
         data['times'] = \
-            tc.epoch_to_datetime(np.array(ncfile.variables['time'])[0])
+            tc.epoch_to_datetime(np.array(ncfile.variables['time'])[0], t0=t0)
 
         try:
             data['isEnsemble'] = True if ncfile.isEnsemble == "True" else False
@@ -220,7 +236,7 @@ def read_netcdf_all_files(filelist, varlist=[-1], verbose=False):
                          "function.\n\tProvided: " + str(prefixes))
 
     # first read in spatial information:
-    vars = ['lon', 'lat', 'z']
+    vars = ['lon', 'Longitude', 'lat', 'Latitude', 'z', 'Altitude']
     spatialData = read_netcdf_one_file(filelist[0], vars, verbose=False)
 
     nTimes = len(filelist)
@@ -233,13 +249,14 @@ def read_netcdf_all_files(filelist, varlist=[-1], verbose=False):
 
     allTimes = []
     if (spatialData['nblocks'] == 0):
-    
-        lons = spatialData['lon']  
-        nLons = len(lons[:, 0, 0])
-        lats = spatialData['lat']
-        nLats = len(lats[0, :, 0])
-        alts = spatialData['z'] / 1000.0  # Convert from m to km
-        nAlts = len(alts[0, 0, :])
+        # This assumes we have 3D arrays for the coord info.
+        # GITM will put 1D arrays into lon/lat/z if it can, which we don't want.   
+        lons = spatialData['Longitude' if 'Longitude' in spatialData.keys() else 'lon']
+        nLons = len(lons[0, :, 0, 0])
+        lats = spatialData['Latitude' if 'Latitude' in spatialData.keys() else 'lat']
+        nLats = len(lats[0, 0, :, 0])
+        alts = spatialData['Altitude' if 'Altitude' in spatialData.keys() else 'z'] / 1000.0  # Convert from m to km
+        nAlts = len(alts[0, 0, 0, :])
         nBlocks = 0
         
         if (nVars == 1):
