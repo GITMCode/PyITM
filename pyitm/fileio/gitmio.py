@@ -349,7 +349,11 @@ def read_logfile(logfile=None, datadir=None, verbose=False):
             if saving:
                 # first line (after #START) has the headers
                 if len(logdata.keys()) == 0:
+                    vars = []
                     for col in line.strip().split():
+                        while (col in vars):
+                            col = col+'0'
+                        vars.append(col)
                         logdata[col] = []
                     if verbose:
                         print(f"  -> Reading columns: {list(logdata.keys())}")
