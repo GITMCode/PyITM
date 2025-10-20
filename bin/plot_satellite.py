@@ -429,37 +429,6 @@ def main(satfiles, modeldatapath, vars2plot=None, satNames=None, sat_lookup=None
     
     print(f"Found data from satellites: {list(satData.keys())}.")
 
-    if vars2plot is not None:
-        # Leave empty if nothing is specified...
-        wantVars = variables.match_var_name(vars2plot, header0)
-    else:
-        wantVars = []
-
-    # If we're plotting winds, only read ve/vn & vie/vin from model data:
-    if isWind:
-        winds2plot = []
-        # Check if we have neutral winds...
-        haveneutralwind = False
-        haveionwind = False # weird name
-        for satname in satData.keys():
-            if 'Ve' in satData[satname].keys() and 'Vn' in satData[satname].keys():
-                haveneutralwind = True
-            if 'Vie' in satData[satname].keys() and 'Vin' in satData[satname].keys():
-                haveionwind = True
-        
-        if haveneutralwind:
-            winds2plot.extend([i for i in ['Ve', 'Vn'] if i in wantVars or wantVars == []])
-        
-        if haveionwind:
-            winds2plot.extend([i for i in ['Vie', 'Vin'] if i in wantVars or wantVars == []])
-        
-        if wantVars == []:
-            # Plot everything we have
-            vars2plot = winds2plot
-        else:
-            # plot wnat's requested 
-            vars2plot = [i for i in wantVars if i in winds2plot]
-
     # Read in the first model data file, which allows the model reader to handle the
     # variable name remapping instead of us. Allows for more flexibility with TEC or
     # multple models.
@@ -477,6 +446,18 @@ def main(satfiles, modeldatapath, vars2plot=None, satNames=None, sat_lookup=None
                     print(f"-> Variable {varname} found in {sat}.")
                 if varname not in vars_found:
                     vars_found.append(varname)
+
+    vars2plot = []
+    if isWind: # Only plot wind data.
+        windvars = ['Vn', 'Ve', 'Vie', 'Vin']
+        for varname in vars_found:
+            if varname in windvars:
+                vars2plot.append(varname)
+            else:
+                print(f" --> Non-wind variable found! Skipping '{varname}'")
+    else:
+        vars2plot = vars_found
+    
     if verbose:
         print(f"Variables to plot: {vars_found}")
 
