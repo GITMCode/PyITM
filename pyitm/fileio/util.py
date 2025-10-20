@@ -76,12 +76,16 @@ def find_files_in_different_directory(filelist, dir):
 
 def determine_if_tec(varsToRead):
     isTec = False
-    if (np.isscalar(varsToRead)):
+    if varsToRead == []:
+        return isTec
+
+    if (isinstance(varsToRead, str)):
         if (varsToRead.lower() == 'tec'):
             isTec = True
     else:
-        if (varsToRead[0].lower() == 'tec'):
-            isTec = True
+        if (isinstance(varsToRead[0], str)):
+            if (varsToRead[0].lower() == 'tec'):
+                isTec = True
     return isTec
 
 # ----------------------------------------------------------------------------
@@ -89,16 +93,20 @@ def determine_if_tec(varsToRead):
 
 def determine_if_on2(varsToRead):
     isOn2 = False
-    if (np.isscalar(varsToRead)):
+    if varsToRead == []:
+        return isOn2
+
+    if (isinstance(varsToRead, str)):
         if (varsToRead.lower() == 'on2'):
             isOn2 = True
         if (varsToRead.lower() == 'o/n2'):
             isOn2 = True
     else:
-        if (varsToRead[0].lower() == 'on2'):
-            isOn2 = True
-        if (varsToRead[0].lower() == 'o/n2'):
-            isOn2 = True
+        if (isinstance(varsToRead[0], str)):
+            if (varsToRead[0].lower() == 'on2'):
+                isOn2 = True
+            if (varsToRead[0].lower() == 'o/n2'):
+                isOn2 = True
     return isOn2
 
 # ----------------------------------------------------------------------------
