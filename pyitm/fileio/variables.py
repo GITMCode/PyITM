@@ -149,7 +149,8 @@ def match_var_name(varsIn, header):
         if (not isFound):
             varsOut.append('NotFound')
             print('Could not find variable : ', varIn)
-            print('  -> Should be able to list variables by putting -list')
+            print('  -> Should be able to list variables by putting -list or running with -verbose')
+            raise KeyError
 
     return varsOut
 

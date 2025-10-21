@@ -205,7 +205,7 @@ def read_netcdf_one_header(filename):
         else:
             t0 = datetime(1965, 1, 1)
         data['times'] = \
-            tc.epoch_to_datetime(np.array(ncfile.variables['time'])[0], t0=t0)
+            tc.epoch_to_datetime(np.array(ncfile.variables['time']), t0=t0)
 
         try:
             data['isEnsemble'] = True if ncfile.isEnsemble == "True" else False

@@ -145,7 +145,10 @@ def read_all_files(filelist, varsToRead = None, verbose = False):
     if (isTec):
         tec = utils.calc_tec(allData)
         allData['tec'] = tec
-        
+
+    if any(np.sort(allData['times']) != allData['times']):
+        raise ValueError("Times do not appear to be sorted. Cannot continue!!")
+
     return allData
 
 # ----------------------------------------------------------------------------
@@ -256,7 +259,7 @@ def any_to_filelist(input_data=None):
                 return input_data
             else:
                 return any_to_filelist(input_data[0])
-        else: #list of files is longer that one
+        else: #list of files is longer than one
             return input_data
 
 # ----------------------------------------------------------------------------
