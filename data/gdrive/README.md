@@ -22,8 +22,8 @@ this folder. First, make sure the folder is appearing in "Shared with me" on Goo
   - The rclone command to download is `rclone copy [REMOTE]:PyITMData/ .`. Perform a
     dry-run or run interactively if you are unsure.
   - To upload run:
-    `rclone copy --exclude='*.csv' --exclude='*.md' . [REMOTE]:PyITMData/` (make sure
-    to change to your remote's name & double-check the paths). You may with to run 
+    `rclone copy --exclude='*.csv' --exclude='*.md' --exclue='*.txt' --exclude='*.png'. [REMOTE]:PyITMData/`
+    (make sure to change to your remote's name & double-check the remote path). You may with to run 
     interactively or do a dry run first.
 
 
