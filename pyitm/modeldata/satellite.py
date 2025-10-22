@@ -128,10 +128,11 @@ def extract_1d(sat_locations, model_data, interpVar=None,
     
     for i, time in enumerate(sat_locations['times']):
         
-        while model_data['times'][itb4 + 1] <= time:
+        while model_data['times'][itb4 + 1] < time:
             itb4 += 1
-            if itb4+1 == len(model_data['times']):
-                raise ValueError("TIME ERROR!! Try running with verbose")
+            if itb4+1 >= len(model_data['times']):
+                itb4 -= 1
+                break
             
         dt = (model_data["times"][itb4] - \
               model_data["times"][itb4 + 1]).total_seconds()
