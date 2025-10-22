@@ -116,6 +116,16 @@ def extract_1d(sat_locations, model_data, interpVar=None,
     if verbose:
         print(f" -> Interpolating variables: {[model_data['vars'][i] for i in interpVar]}.")
 
+    goceAltsAll = np.array(sat_locations["alts"])
+    goceLatsAll = np.array(sat_locations["lats"]) 
+    re = 6378.137
+    rp = 6356.75
+    diff = re - rp
+    rgitm = 6372.0
+    r = rp + diff * np.cos(np.deg2rad(goceLatsAll))
+    correction = r - rgitm
+    sat_locations['alts'] = goceAltsAll + correction
+    
     for i, time in enumerate(sat_locations['times']):
         
         while model_data['times'][itb4 + 1] <= time:
