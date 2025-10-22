@@ -352,8 +352,8 @@ def calc_wind_dir(lons, lats):
 
     # Rotate the unit vector, so that it points orthogonal to the
     # orbit plane.  This will be the actual wind vector direction:
-    uniteRot = unitn
-    unitnRot = -unite
+    uniteRot = np.abs(-unitn)
+    unitnRot = np.abs(-unite)
 
     return uniteRot, unitnRot
 
@@ -373,8 +373,8 @@ def calc_zon_merid_wind(satDataDict, verbose=False):
         satDataDict['model_Vie'] = unitE * satDataDict['model_Vie']
         satDataDict['model_Vin'] = unitN * satDataDict['model_Vin']
     else:
-        raise KeyError(
-            f"Horizontal winds not found! Found keys:\n\t{satDataDict.keys()}")
+        print(f"Found keys:\n\t{satDataDict.keys()}")
+        raise KeyError("Horizontal winds not found!")
 
     return satDataDict
 
