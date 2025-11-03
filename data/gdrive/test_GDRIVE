@@ -1,0 +1,67 @@
+
+# Comments are hashtags, lines beginning with # are ignored
+# Empty lines are also ignored
+# Variables are declared/initialized with lines starting -
+# The code will continue appending to the same variable until it finds a new one
+# Comments & empty lines *can* be placed in the midle of a variable definition!
+
+# If a line is too long, it can be continued on the next as long as the 
+# next line begins with a space
+
+
+# The base path to process. [DATE] will be replaced with the dates.
+- fmt_str
+PYITMDIR/[DATE]/gitm_outputs/
+
+
+
+# Dates to process! Same format as the dates on the filesystem (i.e.) this is not parsed
+- dates_to_run
+2019
+2004
+
+
+# Commands to run in each directory
+- each_dir_commands
+python ../../../../bin/plot_satellite.py
+# Line break because command is long. Continuation lines must begin with a space!
+  -vars rho -model 3DALL* -satmap ../../pyitm_satmap.csv
+  -out ../
+
+python ../../../../bin/plot_satellite.py
+  -winds -vars ve vn -model 3DALL* -satmap ../../pyitm_satmap.csv 
+  -out ../ -v
+
+
+
+
+###########################################
+## The following are kinda fringe settings.
+###########################################
+
+
+# In case any sub-directories need to be renamed... 
+# Set to False to ignore
+# OR set new_name to the expected name & old_name to anything you want.
+
+- newname
+False
+#vMSIS21_60
+- oldname
+False
+#vMSIS21x60
+
+# Whether to relocate existing outputs. Can be str(new folder) or false to ignore
+- move_existing
+False
+
+# Make a dayone/ folder if one does not exist?
+- makedayone
+False
+
+# create files containing stderr/stdout?
+# Otherwise it's just printed to the screen
+- dumperr2file
+True
+- dumpout2file
+True

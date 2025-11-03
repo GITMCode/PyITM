@@ -116,13 +116,24 @@ def extract_1d(sat_locations, model_data, interpVar=None,
     if verbose:
         print(f" -> Interpolating variables: {[model_data['vars'][i] for i in interpVar]}.")
 
+    goceAltsAll = np.array(sat_locations["alts"])
+    goceLatsAll = np.array(sat_locations["lats"]) 
+    re = 6378.137
+    rp = 6356.75
+    diff = re - rp
+    rgitm = 6372.0
+    r = rp + diff * np.cos(np.deg2rad(goceLatsAll))
+    correction = r - rgitm
+    sat_locations['alts'] = goceAltsAll + correction
+    
     for i, time in enumerate(sat_locations['times']):
         
-        if model_data['times'][itb4 + 1] <= time:
+        while model_data['times'][itb4 + 1] < time:
             itb4 += 1
-            if itb4+1 == len(model_data['times']):
+            if itb4+1 >= len(model_data['times']):
                 itb4 -= 1
-        
+                break
+            
         dt = (model_data["times"][itb4] - \
               model_data["times"][itb4 + 1]).total_seconds()
         xt = (time - model_data["times"][itb4]).total_seconds() / dt
@@ -352,8 +363,8 @@ def calc_wind_dir(lons, lats):
 
     # Rotate the unit vector, so that it points orthogonal to the
     # orbit plane.  This will be the actual wind vector direction:
-    uniteRot = unitn
-    unitnRot = -unite
+    uniteRot = np.abs(-unitn)
+    unitnRot = np.abs(-unite)
 
     return uniteRot, unitnRot
 
@@ -373,8 +384,8 @@ def calc_zon_merid_wind(satDataDict, verbose=False):
         satDataDict['model_Vie'] = unitE * satDataDict['model_Vie']
         satDataDict['model_Vin'] = unitN * satDataDict['model_Vin']
     else:
-        raise KeyError(
-            f"Horizontal winds not found! Found keys:\n\t{satDataDict.keys()}")
+        print(f"Found keys:\n\t{satDataDict.keys()}")
+        raise KeyError("Horizontal winds not found!")
 
     return satDataDict
 

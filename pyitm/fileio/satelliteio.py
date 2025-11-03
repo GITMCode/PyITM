@@ -86,18 +86,18 @@ def _read_goce(file, verbose=False):
 # Read CHAMP data
 #-----------------------------------------------------------------------------
 
-def _read_champ(file, verbose=False):
+def _read_tudelft(file, verbose=False):
     """
-    Read a CHAMP file
+    Read a CHAMP/swarm file
 
     Inputs
     ------
-        file (str) - Path to CHAMP file
+        file (str) - Path to file
         verbose (bool) - print extra info? Default=False
 
     Returns
     -------
-        (dict) - CHAMP data
+        (dict) - data
     
     """
     
@@ -110,7 +110,7 @@ def _read_champ(file, verbose=False):
     data["rho"] = []
 
     if verbose:
-        print(f" -> read_champ: Opening {file}")
+        print(f" -> read_tudelft: Opening {file}")
 
     f = open(file, 'r')
 
@@ -354,7 +354,8 @@ def _read_sat_one_file(filename:str, satname=None, verbose=False):
     satreaders = {'grace_density': _read_grace,
                   'grace_wind': _read_grace_winds,
                   'goce': _read_goce,
-                  'champ': _read_champ,
+                  'champ': _read_tudelft,
+                  'swarm': _read_tudelft,
                   'dmsp_precipitation': madrigalio._read_madrigal_one_file,
                   'dmsp_density': madrigalio._read_madrigal_one_file,
                   'dmsp_utd': madrigalio._read_madrigal_one_file,
@@ -363,6 +364,7 @@ def _read_sat_one_file(filename:str, satname=None, verbose=False):
     # satellite name & patterns that should be checked against filename
     satlookup = {'goce': ['go'],
                  'champ': ['ch'],
+                 'swarm': ['sa', 'sb', 'sc',],
                  'grace_density': ['gr_dns', 'ga_dns', 'gb_dns', 'gc_dns'],
                  'grace_wind': ['gr_wnd', 'ga_wnd', 'gb_wnd', 'gc_wnd'],
                  'dmsp_precipitation': ['e.001.hdf5', 'e.001.nc'], # format is dms_[date]_#_e...

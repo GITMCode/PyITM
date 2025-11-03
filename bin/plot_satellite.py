@@ -1,4 +1,4 @@
-import argparse, os, scipy
+import argparse, os, scipy.interpolate
 import numpy as np
 from pyitm.fileio import variables
 from pyitm.fileio.util import any_to_filelist, read_all_headers, read_all_files, read_satfiles
@@ -253,7 +253,7 @@ def plot_asc_desc(satDict, satName, varname='rho',
         axs[1].set_title("Modeled " + dirname)
         axs[1].set_xlabel('Time (hours from ' + 
                         satDict['times'][0].strftime('%Y-%m-%d %H:%M') + ')')
-        fig.colorbar(pcm, ax=axs[1], label=varname + ' (kg/m3)')
+        fig.colorbar(pcm, ax=axs[1], label=variables.get_long_names([varname])[0])
 
         outdate = satDict['times'][0].strftime('%Y%m%d')
         savename = os.path.join(savepath, 
@@ -393,7 +393,7 @@ def write_out_data(satDataDict, savepath, varname, satName, verbose=False):
             
 
 
-def main(satfiles, modeldatapath, vars2plot=3, satNames=None, sat_lookup=None,
+def main(satfiles, modeldatapath, vars2plot=None, satNames=None, sat_lookup=None,
          isWind=False,
          saveData=True, savePlot=True, savePath='./',
          verbose=False):
@@ -414,10 +414,9 @@ def main(satfiles, modeldatapath, vars2plot=3, satNames=None, sat_lookup=None,
     header0 = read_all_headers(model_filelist[0], verbose=verbose)
     header1 = read_all_headers(model_filelist[-1], verbose=verbose)
     # And we need the dates to read in satellite files!
-    date0, date1 = header0['times'][0], header1['times'][-1]
+    date0, date1 = header0['times'][0], header1['times'][0]
     if verbose:
-        print(f"Model data ranges from {date0} to {date1}")
-
+        print(f" -> Model data start/end dates: {date0.date()} / {date1.date()}")
     # Read in satellite data
     print("Reading in satellite data...")
 
@@ -430,32 +429,11 @@ def main(satfiles, modeldatapath, vars2plot=3, satNames=None, sat_lookup=None,
     
     print(f"Found data from satellites: {list(satData.keys())}.")
 
-    # If we're plotting winds, only read ve/vn from model data:
-    if isWind:
-        vars2plot = []
-        # 2 versions of this - one for us to iterate over later, one to tell the reader what to read
-        winds2plot = []
-        # Check if we have neutral winds...
-        neutralwind = False
-        ionwind = False #weird name
-        for satname in satData.keys():
-            if 'Ve' in satData[satname].keys() and 'Ve' in satData[satname].keys():
-                neutralwind = True
-            if 'Vie' in satData[satname].keys() and 'Vie' in satData[satname].keys():
-                ionwind = True
-        if neutralwind:
-            winds2plot.append(['Ve', 'Vn'])
-            vars2plot.extend(['Ve', 'Vn'])
-        if ionwind:
-            winds2plot.append(['Vie', 'Vin'])
-            vars2plot.extend(['Vie', 'Vin'])
-
     # Read in the first model data file, which allows the model reader to handle the
     # variable name remapping instead of us. Allows for more flexibility with TEC or
     # multple models.
     modelt0 = read_all_files(model_filelist[0], varsToRead=vars2plot, verbose=verbose)
     varnames = modelt0['shortname']
-    # varnames.extend(modelt0['vars'])
 
     vars_found = []
 
@@ -468,6 +446,21 @@ def main(satfiles, modeldatapath, vars2plot=3, satNames=None, sat_lookup=None,
                     print(f"-> Variable {varname} found in {sat}.")
                 if varname not in vars_found:
                     vars_found.append(varname)
+
+    vars2plot = []
+    if isWind: # Only plot wind data.
+        windvars = ['Vn', 'Ve', 'Vie', 'Vin']
+        for varname in vars_found:
+            if varname in windvars:
+                vars2plot.append(varname)
+            else:
+                print(f" --> Non-wind variable found! Skipping '{varname}'")
+        if vars2plot == []:
+            print("No wind data found!! Are you sure it exists???")
+            return
+    else:
+        vars2plot = vars_found
+    
     if verbose:
         print(f"Variables to plot: {vars_found}")
 
@@ -477,31 +470,41 @@ def main(satfiles, modeldatapath, vars2plot=3, satNames=None, sat_lookup=None,
 
     if isWind:
         print(f"-> Reading in model data for {vars2plot}. This may take a while...")
-            # Read in model data. We pass handling of the variable names to read_all_files
-        if len(modeldatapath) == 1:
-            modeldatapath = modeldatapath[0]
-        modelData = read_all_files(modeldatapath, varsToRead=vars2plot, verbose=verbose)
+
+        modelData = read_all_files(model_filelist, varsToRead=vars2plot, verbose=verbose)
+
         for name, data in satData.items():
+            windsInSat = False
+            print('satellite -- name:', name, '   keys: ', data.keys())
+            # Make holder for interpolated data
+            interpdData = {}
             # will be some combo/order of [ion velo, neutral velo]
-            for windvars in winds2plot:
+            for var_idx, varname in enumerate(vars2plot):
                 # Make sure satellite has the wind
-                if all([vname in data for vname in windvars]):
-
-                    # Get indices of wind in model data
-                    interp_ind = [varnames.index(vname) for vname in windvars]
-
-                    interp_data = satellite.extract_1d(data, modelData, interpVar=interp_ind, 
+                if varname in data:
+                    windsInSat = True
+                    interp_data = satellite.extract_1d(data, modelData, interpVar=var_idx, 
                                                        verbose=verbose)
-                    windData = satellite.calc_zon_merid_wind(interp_data)
+                    
+                    # Add to out holder of interpolated data:
+                    for iVar, iData in interp_data.items():
+                        if iVar not in interpdData:
+                            interpdData[iVar] = iData
 
-                    #Call plotting functions. We have already determined if ion/neutral are present.
-                    for varname in windvars:
+            if windsInSat:
+                # Need to have all winds before calculating zon/merid
+                print(' ----> Interpddata:  ', interpdData.keys())
+                windData = satellite.calc_zon_merid_wind(interpdData)
+
+                #Call plotting functions.
+                for varname in vars2plot:
+                    if varname in data:
                         if savePlot:
                             plot_asc_desc(windData, satName=name, varname=varname,
                                             savepath=savePath, verbose=verbose)
                         if saveData:
                             write_out_data(windData, savepath=savePath, varname=varname,
-                                        satName=name, verbose=verbose)
+                                            satName=name, verbose=verbose)
 
 
     else:
@@ -544,7 +547,9 @@ def main(satfiles, modeldatapath, vars2plot=3, satNames=None, sat_lookup=None,
 if __name__ == "__main__":
     args = parse_args()
 
-    main(args.sat_files, args.model_data, args.variables, args.sat_names,
+    main(args.sat_files, args.model_data, 
+         vars2plot=args.variables,
+         satNames=args.sat_names,
          sat_lookup=args.sat_lookup,
          isWind=args.winds,
          saveData=(not args.nodata), 

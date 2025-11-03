@@ -76,12 +76,16 @@ def find_files_in_different_directory(filelist, dir):
 
 def determine_if_tec(varsToRead):
     isTec = False
-    if (np.isscalar(varsToRead)):
+    if varsToRead == []:
+        return isTec
+
+    if (isinstance(varsToRead, str)):
         if (varsToRead.lower() == 'tec'):
             isTec = True
     else:
-        if (varsToRead[0].lower() == 'tec'):
-            isTec = True
+        if (isinstance(varsToRead[0], str)):
+            if (varsToRead[0].lower() == 'tec'):
+                isTec = True
     return isTec
 
 # ----------------------------------------------------------------------------
@@ -89,16 +93,20 @@ def determine_if_tec(varsToRead):
 
 def determine_if_on2(varsToRead):
     isOn2 = False
-    if (np.isscalar(varsToRead)):
+    if varsToRead == []:
+        return isOn2
+
+    if (isinstance(varsToRead, str)):
         if (varsToRead.lower() == 'on2'):
             isOn2 = True
         if (varsToRead.lower() == 'o/n2'):
             isOn2 = True
     else:
-        if (varsToRead[0].lower() == 'on2'):
-            isOn2 = True
-        if (varsToRead[0].lower() == 'o/n2'):
-            isOn2 = True
+        if (isinstance(varsToRead[0], str)):
+            if (varsToRead[0].lower() == 'on2'):
+                isOn2 = True
+            if (varsToRead[0].lower() == 'o/n2'):
+                isOn2 = True
     return isOn2
 
 # ----------------------------------------------------------------------------
@@ -137,7 +145,10 @@ def read_all_files(filelist, varsToRead = None, verbose = False):
     if (isTec):
         tec = utils.calc_tec(allData)
         allData['tec'] = tec
-        
+
+    if any(np.sort(allData['times']) != allData['times']):
+        raise ValueError("Times do not appear to be sorted. Cannot continue!!")
+
     return allData
 
 # ----------------------------------------------------------------------------
@@ -248,7 +259,7 @@ def any_to_filelist(input_data=None):
                 return input_data
             else:
                 return any_to_filelist(input_data[0])
-        else: #list of files is longer that one
+        else: #list of files is longer than one
             return input_data
 
 # ----------------------------------------------------------------------------
@@ -379,16 +390,14 @@ def lookup_satfiles(lookup_file, date_start, date_end=None, satname=None, verbos
     dates = []
     if (verbose):
         print('Inside lookup_satellite: ')
-        print(' -> figuring out dates: ', date_start)
+
     if isinstance(date_start, (datetime.datetime, datetime.date)):
         dates = [date_start]
         if date_end is not None:
-            if (verbose):
-                print('   -> end date: ', date_end)
-            
             if date_end < date_start:
                 raise ValueError("date_end must be after date_start")
             if date_end > date_start:
+                # iterate +1 day till we reach end
                 tday = date_start + datetime.timedelta(days=1)
                 while tday <= date_end:
                     dates.append(tday)
@@ -402,7 +411,7 @@ def lookup_satfiles(lookup_file, date_start, date_end=None, satname=None, verbos
         
 
     if (verbose):
-        print('  --> dates to search for : ', dates)
+        print('  --> dates to search for : ', [str(d.date()) for d in dates])
         
     # Open the lookup table:
     with open(lookup_file, 'r') as f:
@@ -412,9 +421,10 @@ def lookup_satfiles(lookup_file, date_start, date_end=None, satname=None, verbos
         # it's a header.
         iline = 1
     
-    satnames = []
-    sat_paths = []
-    sat_filenames = []
+    lookup = {}
+    lookup['satnames'] = []
+    lookup['sat_paths'] = []
+    lookup['sat_filenames'] = []
 
     for iline in range(iline, len(lines)):
         line = lines[iline].strip()
@@ -423,54 +433,57 @@ def lookup_satfiles(lookup_file, date_start, date_end=None, satname=None, verbos
         parts = line.split(',')
         if len(parts) < 2:
             continue
-        satnames.append(parts[0].strip())
-        sat_paths.append(parts[1].strip())
+        lookup['satnames'].append(parts[0].strip())
+        lookup['sat_paths'].append(parts[1].strip())
         if len(parts) > 2:
-            sat_filenames.append(parts[2].strip())
+            lookup['sat_filenames'].append(parts[2].strip())
         else:
-            sat_filenames.append('*')
+            lookup['sat_filenames'].append('*')
     if verbose:
-        print(f"-> Found {len(satnames)} entries in lookup table.")
+        print(f"-> Found {len(lookup['satnames'])} entries in lookup table.")
 
     if satname is not None:
+        if isinstance(satname, str):
+            satname = [satname]
         if verbose:
-            print('  --> Looking at satnames : ')
-            for sn in satnames:
-                print('    ', sn)
-        if satname in satnames:
-            isat = satnames.index(satname)
-            satnames = satnames[isat]
-            sat_paths = sat_paths[isat]
-            sat_filenames = sat_filenames[isat]
-            if verbose:
-                print('  --> Satellite found: ', satname)
-                print('      isat : ', isat)
-                print('      sat_paths : ', sat_paths)
-                print('      sat_filenames : ', sat_filenames)
-        else:
-            raise KeyError(
-                f"From lookup_satfiles '{satname}' not found!"
-                f"  Expected one of: {satnames}")
+            print(f"""  --> Received satellite names: '{"', '".join(satnames)}""")
+        for isatname in satname:
+            if isatname in satnames:
+                isat = satnames.index(isatname)
+                satnames = satnames[isat]
+                sat_paths = sat_paths[isat]
+                sat_filenames = sat_filenames[isat]
+                if verbose:
+                    print('  --> Satellite found: ', isatname)
+                    print('      isat : ', isat)
+                    print('      sat_paths : ', sat_paths)
+                    print('      sat_filenames : ', sat_filenames)
+            else:
+                raise KeyError(
+                    f"From lookup_satfiles '{isatname}' not found!"
+                    f"  Expected one of: {satnames}")
+    else:
+        satnames = lookup['satnames']
+        sat_paths = lookup['sat_paths']
+        sat_filenames = lookup['sat_filenames']
 
     satfiles_out = []
     satnames_out = []
-    sat = satnames
-    sdir = sat_paths
-    sfname = sat_filenames
-    #for sat, sdir, sfname in zip(satnames, sat_paths, sat_filenames):
-    if verbose:
-        print(f"  --> Searching for files in {sdir}")
-    for eachdate in dates:
-        p = eachdate.strftime(os.path.join(sdir, sfname))
+
+    for sat, sdir, sfname in zip(satnames, sat_paths, sat_filenames):
         if verbose:
-            print('  --> search path : ', p)
-        days_files = sorted(glob(p))
-        if verbose:
-            print(f"   --> Found {len(days_files)} files for {eachdate}")
-        if len(days_files) == 0:
-            continue
-        # append to satfiles, making sure it is 1D
-        satfiles_out = satfiles_out + days_files
-        satnames_out = satnames_out + [sat]*len(days_files)
+            print(f"  --> Searching for files in {sdir}")
+        for eachdate in dates:
+            p = eachdate.strftime(os.path.join(sdir, sfname))
+            if verbose:
+                print('  --> search path : ', p)
+            days_files = sorted(glob(p))
+            if verbose:
+                print(f"   --> Found {len(days_files)} files on {eachdate}")
+            if len(days_files) == 0:
+                continue
+            # append to satfiles, making sure it is 1D
+            satfiles_out = satfiles_out + days_files
+            satnames_out = satnames_out + [sat]*len(days_files)
 
     return satfiles_out, satnames_out

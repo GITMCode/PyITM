@@ -24,11 +24,15 @@ var_map = {'gdlat': 'lats',
            'el_i_flux': 'eFlux',
            'ion_i_flux': 'eFlux_I',
            'ne': 'e-',
+           'ni': 'e-',
+           'te': 'Te',
+           'ti': 'Ti',
 }
 
 def _read_madrigal_one_file(filename, verbose=False):
     """
-    Read a single Madrigal file, either netCDF or HDF5.
+    Read a single Madrigal file, either netCDF or HDF5. This only reads a single file.
+    Use pyitm.fileio.util.read_satfiles to read multiple files.
 
     Parameters
     ----------
@@ -53,7 +57,8 @@ def _read_madrigal_one_file(filename, verbose=False):
     
 def _read_madrigal_nc_file(filepath, verbose=False):
     """
-    Read a Madrigal netCDF file. 
+    Read a Madrigal netCDF file. This is called automatically from
+      '_read_madrigal_one_file' if the filetype is .nc
 
     Parameters
     ----------
@@ -105,7 +110,8 @@ def extrainfo(v):
 
 def _read_madrigal_hdf5_file(filepath, verbose=False):
     """
-    Read data from a Madrigal HDF5 file.
+    Read data from a Madrigal HDF5 file. This is called automatically from
+      '_read_madrigal_one_file' if the filetype is .hdf5 or .h5
 
     Parameters
     ----------
@@ -195,10 +201,16 @@ def _read_madrigal_hdf5_file(filepath, verbose=False):
                     data[newname] = f['Data/Table Layout'][varname]
                     if verbose:
                         print(f"-> Read variable '{varname}'->{newname} with shape {data[newname].shape}.")
-            # Convert times to times key in data
+            
+            # Convert ymdhms columns to times key in data
             for k in ['year', 'month', 'day', 'hour', 'minute', 'second']:
                 if k not in times:
-                    times[k] = np.zeros_like(times[list(times.keys())[0]])
+                    # If we do not find something (minute), look for first 3 chars (min)
+                    first3 = k[:3]
+                    if first3 in times:
+                        times[k] = times[first3]
+                    else:
+                        times[k] = np.zeros_like(times[list(times.keys())[0]])
             data['times'] = np.array([datetime.datetime(int(y), int(m), int(d), int(h), int(mi), int(s))
                              for y, m, d, h, mi, s in zip(times['year'], times['month'], times['day'],
                                                   times['hour'], times['minute'], times['second'])])

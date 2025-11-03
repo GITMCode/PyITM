@@ -37,6 +37,49 @@ def parse_args():
 
     return args
 
+
+def get_logdata(logfile, vars2plot, just_list=False):
+    logData = gitmio.read_logfile(logfile=logfile)
+    vars = []
+    for i, k in enumerate(logData.keys()):
+        vars.append(k)
+        if (just_list):
+            print('%02d. ' % i, vars[-1])
+
+    if (just_list):
+        exit()
+
+    iY_ = vars[1]
+    iM_ = vars[2]
+    iD_ = vars[3]
+    iH_ = vars[4]
+    iMi_ = vars[5]
+    iS_ = vars[6]
+
+    nTimes = len(logData[vars[0]])
+    times = []
+
+    for iT in range(nTimes):
+        year = int(logData[iY_][iT])
+        month = int(logData[iM_][iT])
+        day = int(logData[iD_][iT])
+        hour = int(logData[iH_][iT])
+        minute = int(logData[iMi_][iT])
+        second = int(logData[iS_][iT])
+        t = dt.datetime(year, month, day, hour, minute, second)
+        times.append(t)
+
+    data_to_plot = {'times': times,
+                    'note': logfile,
+                    'vars': []}
+        
+    for var in vars2plot:
+        print(var, vars[var])
+        data_to_plot['vars'].append(vars[var])
+        data_to_plot[vars[var]] = logData[vars[var]]
+    
+    return data_to_plot
+
 # ----------------------------------------------------------------------
 # Main Code
 # ----------------------------------------------------------------------
@@ -48,44 +91,23 @@ plotfile = args.plotfile
 
 logfile = args.files[0]
 
-logData = gitmio.read_logfile(logfile=logfile)
-vars = []
-for i, k in enumerate(logData.keys()):
-    vars.append(k)
-    if (args.list):
-        print('%02d. ' % i, vars[-1])
+data_to_plot = get_logdata(logfile, args.vars, just_list=args.list)
 
-if (args.list):
-    exit()
+if len(args.files) > 1:
+    print('multiple')
+    # create fig & ax from first logfile
+    fig, ax = line_plots.lineplot_data(data_to_plot, outFile=None)
+    for iFile in range(1, len(args.files)):
+        # add as many lines as we have
+        logfile = args.files[iFile]
+        data_to_plot = get_logdata(logfile, args.vars)
+        if iFile < len(args.files) - 1:
+            fig, ax = line_plots.lineplot_data(data_to_plot,
+                                               outFile=None, fig=fig, ax=ax)
+        else:
+            line_plots.lineplot_data(data_to_plot,
+                                               outFile=plotfile, fig=fig, ax=ax)
 
-iY_ = vars[1]
-iM_ = vars[2]
-iD_ = vars[3]
-iH_ = vars[4]
-iMi_ = vars[5]
-iS_ = vars[6]
-
-nTimes = len(logData[vars[0]])
-times = []
-
-for iT in range(nTimes):
-    year = int(logData[iY_][iT])
-    month = int(logData[iM_][iT])
-    day = int(logData[iD_][iT])
-    hour = int(logData[iH_][iT])
-    minute = int(logData[iMi_][iT])
-    second = int(logData[iS_][iT])
-    t = dt.datetime(year, month, day, hour, minute, second)
-    times.append(t)
-
-data_to_plot = {'times': times,
-                'note': logfile,
-                'vars': []}
-
-for var in args.vars:
-    print(var, vars[var])
-    data_to_plot['vars'].append(vars[var])
-    data_to_plot[vars[var]] = logData[vars[var]]
-
-line_plots.lineplot_data(data_to_plot, plotfile)
-
+else:
+    # just plot single file
+    line_plots.lineplot_data(data_to_plot, outFile=None)

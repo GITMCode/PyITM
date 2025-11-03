@@ -13,7 +13,17 @@ from pyitm.plotting import axes
 #
 # ----------------------------------------------------------------------------
 
-def lineplot_data(data, outFile, vars = None):
+def lineplot_data(data, outFile=None, fig=None, ax=None, vars = None):
+    """
+    Make lineplot out of data
+
+    if outFile is None, the figure & axes are returned, otherwise figure is saved
+
+    if fig is None, figure is created. Otherwise, lines are drawn on existing plot.
+
+    if vars is None, it will plot out all of the variables, else only listed vars
+    
+    """
 
     if (vars == None):
         vars = data['vars']
@@ -22,16 +32,18 @@ def lineplot_data(data, outFile, vars = None):
     xSize = 10.0
     ySize = 5.0 * nVars
 
-    fig = plt.figure(figsize=(xSize, ySize))
+    if fig is None:
+        fig = plt.figure(figsize=(xSize, ySize))
 
-    yBot = 0.1
-    yTop = 0.05
-    yBuf = 0.05
-    ax = axes.get_axes_one_column(fig,
-                                  nVars,
-                                  yBot,
-                                  yTop,
-                                  yBuf)
+        yBot = 0.1
+        yTop = 0.05
+        yBuf = 0.05
+        ax = axes.get_axes_one_column(fig,
+                                    nVars,
+                                    yBot,
+                                    yTop,
+                                    yBuf)
+
     times = data['times']
     for iPlot, var in enumerate(vars):
         ax[iPlot].plot(times, data[var])
@@ -44,7 +56,9 @@ def lineplot_data(data, outFile, vars = None):
     if ('title' in data.keys()):
         ax[0].set_title(data['title'])
 
-    print(" ==> Writing file : ", outFile)
-    fig.savefig(outFile)
-    plt.close(fig)
-    
+    if outFile:
+        print(" ==> Writing file : ", outFile)
+        fig.savefig(outFile)
+        plt.close(fig)
+    else:
+        return fig, ax

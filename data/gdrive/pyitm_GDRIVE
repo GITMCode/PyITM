@@ -1,0 +1,7 @@
+satname,satdir,globpattern
+champ,PYITMDIR/%Y/satdata/champ,CH_DNS_ACC_%Y_%m_v01.txt
+grace,PYITMDIR/%Y/satdata/grace,GA_DNS_ACC_%Y_%m_v01.txt
+gracefo,PYITMDIR/%Y/satdata/GRACEFO,GC_DNS_ACC_%Y_%m_v02c.txt
+swarm,PYITMDIR/%Y/satdata/swarm,S*_DNS_POD_%Y_%m_v01.txt
+dmsp_utd,PYITMDIR/%Y/satdata/dmsp,dms_ut_%Y%m%d_*
+gps,PYITMDIR/%Y/satdata/gps/,gps%y%m%dg.*
