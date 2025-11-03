@@ -36,7 +36,7 @@ def epoch_to_datetime(epoch_time, t0 = dt.datetime(1965, 1, 1)):
     Parameters
     ----------
     epoch_time : int
-        Seconds since 1 Jan 1965
+        Seconds since 1 Jan 1965 (or input time)
 
     Returns
     -------
@@ -77,6 +77,35 @@ def datetime_to_epoch(dtime):
     """
 
     epoch_time = (dtime - dt.datetime(1965, 1, 1)).total_seconds()
+
+    return epoch_time
+
+
+#-----------------------------------------------------------------------------
+# 
+#-----------------------------------------------------------------------------
+
+def datetime_to_unixtime(dtime):
+    """Convert datetime to unix time in seconds (since Jan 1, 1970 00:00 UT).
+
+    Parameters
+    ----------
+    dtime : dt.datetime or dt.date
+        Datetime object
+
+    Returns
+    -------
+    epoch_time : float
+        Seconds since 1 Jan 1970 00:00 UT
+
+    """
+
+    if (np.isscalar(dtime)):
+        epoch_time = (dtime - dt.datetime(1970, 1, 1)).total_seconds()
+    else:
+        epoch_time = []
+        for t in dtime:
+            epoch_time.append((t - dt.datetime(1970, 1, 1)).total_seconds())
 
     return epoch_time
 
