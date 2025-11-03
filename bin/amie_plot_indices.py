@@ -52,6 +52,9 @@ for i, v in enumerate(vars):
     if ((iEflux_ < 0) and ('electron energy flux' in v.lower())):
         iEflux_ = i
         print('  --> found electron eflux')
+    if ((iEflux_ < 0) and ('auroral energy flux' in v.lower())):
+        iEflux_ = i
+        print('  --> found electron eflux')
 
 if (iPot_ < 0):
     print("Can't find potential!")
