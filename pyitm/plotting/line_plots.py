@@ -13,9 +13,10 @@ from pyitm.plotting import axes
 #
 # ----------------------------------------------------------------------------
 
-def lineplot_data(data, outFile):
+def lineplot_data(data, outFile, vars = None):
 
-    vars = data['vars']
+    if (vars == None):
+        vars = data['vars']
     nVars = len(vars)
 
     xSize = 10.0
