@@ -171,7 +171,7 @@ if __name__ == '__main__':
         tecGitm = gitmTEC['model_tec'][iS:iE]
         # Calculate some quantities to save:
         weights = np.cos(lats * np.pi/180.0)
-        ave = weighted_mean((tecData - tecGitm)**2, weights):
+        ave = weighted_mean((tecData - tecGitm)**2, weights)
         globalRms[iT] = np.sqrt(ave)
         globalDiff[iT] = weighted_mean(tecData - tecGitm, weights)
         globalTecMean[iT] = weighted_mean(tecData, weights)
