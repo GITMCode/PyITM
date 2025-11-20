@@ -408,7 +408,6 @@ def lookup_satfiles(lookup_file, date_start, date_end=None, satname=None, verbos
             date_start = list(date_start)
         except:
             raise TypeError("date_start must be datetime, or date-like, or list-like")
-        
 
     if (verbose):
         print('  --> dates to search for : ', [str(d.date()) for d in dates])
@@ -446,13 +445,16 @@ def lookup_satfiles(lookup_file, date_start, date_end=None, satname=None, verbos
         if isinstance(satname, str):
             satname = [satname]
         if verbose:
-            print(f"""  --> Received satellite names: '{"', '".join(satnames)}""")
+            print(f"""  --> Received satellite names: '{"', '".join(satname)}""")
+        satnames = []
+        sat_paths = []
+        sat_filenames = []
         for isatname in satname:
-            if isatname in satnames:
-                isat = satnames.index(isatname)
-                satnames = satnames[isat]
-                sat_paths = sat_paths[isat]
-                sat_filenames = sat_filenames[isat]
+            if isatname in lookup['satnames']:
+                isat = lookup['satnames'].index(isatname)
+                satnames.append(lookup['satnames'][isat])
+                sat_paths.append(lookup['sat_paths'][isat])
+                sat_filenames.append(lookup['sat_filenames'][isat])
                 if verbose:
                     print('  --> Satellite found: ', isatname)
                     print('      isat : ', isat)
