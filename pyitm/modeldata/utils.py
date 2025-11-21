@@ -382,10 +382,11 @@ def move_centers_to_corners(pos2d):
     nX, nY = np.shape(pos2d)
     intermediate = np.zeros((nX + 1, nY))
     final = np.zeros((nX + 1, nY + 1))
+    # This is done with elipses instead of colon in case a file has 1D coords (nc)
     for iY in range(nY):
-        intermediate[:, iY] = move_centers_to_edges(pos2d[:,iY])
+        intermediate[..., iY] = move_centers_to_edges(pos2d[...,iY])
     for iX in range(nX + 1):
-        final[iX, :] = move_centers_to_edges(intermediate[iX, :])
+        final[iX, ...] = move_centers_to_edges(intermediate[iX, ...])
     return final
 
 
@@ -397,10 +398,11 @@ def vertically_integrate(value, alts, calc3D = False):
     [nLons, nLats, nAlts] = value.shape
     integrated = np.zeros((nLons, nLats, nAlts))
     descending = np.arange(nAlts-2, -1, -1)
-    dz = alts[:,:,-1] - alts[:,:,-2]
+    # This is done with elipses instead of colon in case a file has 1D coords (nc)
+    dz = alts[...,-1] - alts[...,-2]
     integrated[:,:,-1] = value[:,:,-1] * dz
     for i in descending:
-        dz = alts[:,:,i+1] - alts[:,:,i]
+        dz = alts[...,i+1] - alts[...,i]
         integrated[:,:,i] = integrated[:,:,i+1] + value[:,:,i] * dz
     if (not calc3D):
         integrated = integrated[:,:,0]
