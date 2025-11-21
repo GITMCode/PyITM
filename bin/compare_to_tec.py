@@ -70,23 +70,14 @@ if __name__ == '__main__':
     
     f1 = util.read_all_headers(filelist[0])
     f2 = util.read_all_headers(filelist[-1])
-    
-    tecFiles, tecNames = util.lookup_satfiles(lookup, f1['times'][0], \
-                                              date_end = f2['times'][0], \
-                                              satname='gps', verbose=verbose)
 
-    for file in tecFiles:
-        tecData1 = madrigalio._read_madrigal_one_file(file, verbose=verbose)
-        if (file == tecFiles[0]):
-            tecData = tecData1
-        else:
-            nLats, nLons, nTimes1 = np.shape(tecData1['tec'])
-            nLats, nLons, nTimes0 = np.shape(tecData['tec'])
-            tecAll = np.zeros((nLats, nLons, nTimes1 + nTimes0))
-            tecAll[:,:,0:nTimes0] = tecData['tec']
-            tecAll[:,:,nTimes0:] = tecData1['tec']
-            tecData['tec'] = tecAll
-            tecData['times'] = np.concatenate((tecData['times'], tecData1['times']))
+    # Read in 'gps' data. If we have vista, this may need to be changed.
+    # This hands back a dict with keys for each data type, so only take 'gps'
+    tecData = util.read_satfiles(satLookup=lookup, satname='gps', 
+                                 startDate=f1['times'][0],
+                                 endDate=f2['times'][0],
+                                 verbose=verbose)['gps']
+
     # make some assumptions here about the TEC grid:
     nLats, nLons, nTimes = np.shape(tecData['tec'])
     dLat = 180.0/nLats
@@ -97,14 +88,12 @@ if __name__ == '__main__':
 
     gitmData = util.read_all_files(filelist, varsToRead = 'tec', verbose = verbose)
     # need to reformulate the gitm data to fit into the canned functions:
-    nTimesGitm, nLonsGitm, nLatsGitm, nAltsGitm = np.shape(gitmData['data'])
+    nTimesGitm, nLonsGitm, nLatsGitm = np.shape(np.squeeze(gitmData['tec']))
+
     # code needs a 1 for number of variables and number of altitudes:
-    newGitmData = np.zeros((nTimesGitm, 1, nLonsGitm, nLatsGitm, 1))
-    for iT in range(nTimesGitm):
-        newGitmData[iT, 0, :, :, 0] = gitmData['tec'][iT, :, :]
-    gitmData['data'] = newGitmData
+    gitmData['data'] = gitmData['tec'].reshape(nTimesGitm, 1, nLonsGitm, nLatsGitm, 1)
     gitmData['vars'] = ['tec']
-    
+
     # just say we have one alt at 100 km:
     gitmData['alts'] = 100.0
 
