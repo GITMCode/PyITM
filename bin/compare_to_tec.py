@@ -127,9 +127,9 @@ if __name__ == '__main__':
             tecInfo['alts'] = np.concatenate((tecInfo['alts'], alts))
             tecLocs['iStart'].append(tecLocs['iEnd'][-1])
             tecLocs['iEnd'].append(len(tecInfo['times']))
-            
-    
-    gitmTEC = satellite.extract_1d(tecInfo, gitmData, extrapolate=False, verbose=verbose, interpVar=[0])
+
+    gitmTEC = satellite.extract_1d(tecInfo, gitmData, extrapolate=False, interpVar=[0],
+                                   skipTimeCheck=True, verbose=verbose)
 
     dataMinMax = plotutils.get_min_max_data(tecInfo['tec'], None, \
                                             color = 'red', stdevFac = 7.0)

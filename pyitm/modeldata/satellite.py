@@ -4,6 +4,7 @@ import numpy as np
 from pyitm.fileio import variables
 
 def extract_1d(sat_locations, model_data, interpVar=None,
+               skipTimeCheck=False,
                extrapolate=False, verbose=False):
     """ Fly a satellite through model results, returning a timeseries
 
@@ -18,6 +19,10 @@ def extract_1d(sat_locations, model_data, interpVar=None,
     
     interpVar (int or list of int's): which variable (indices) to interpolate. default=None, so 
         interpolate every variable (except lon, lat, [alt]) in the model_data file.
+
+    skipTimeCheck (bool): Set this to False to not mask sat & model data to mutual
+        times. By default (=True), we ensure the times of both fall within the same range.
+        You probably do not need to toggle this.
 
     extrapolate (bool): whether to use data outside the time range covered by both data.
 
@@ -39,10 +44,11 @@ def extract_1d(sat_locations, model_data, interpVar=None,
 
     timesliceModel = False
     timesliceSat = False
-    if min(model_data['times']) < t_min or max(model_data['times']) > t_max:
-        timesliceModel = True
-    if min(sat_locations['times']) < t_min or max(sat_locations['times']) > t_max:
-        timesliceSat = True
+    if not skipTimeCheck:
+        if min(model_data['times']) < t_min or max(model_data['times']) > t_max:
+            timesliceModel = True
+        if min(sat_locations['times']) < t_min or max(sat_locations['times']) > t_max:
+            timesliceSat = True
 
     if verbose:
         print(f" -> found (tmin, tmax): ({t_min}, {t_max})")
