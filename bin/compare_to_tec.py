@@ -102,10 +102,12 @@ if __name__ == '__main__':
     # need to re-arrange the data to use canned functions:
     for iT in iTimes:
         tec = tecData['tec'][:, :, iT]
-        tecSave = tec[tec > 0]
-        # get all valid points
-        lons = lons2d[tec > 0]
-        lats = lats2d[tec > 0]
+        # get all valid points, tec must be > 0
+        ma = np.where((tec > 0))
+
+        tecSave = tec[ma]
+        lons = lons2d[ma]
+        lats = lats2d[ma]
         nPts = len(lons)
         # make a time array for all points
         t = np.array(tecData['times'][iT])
