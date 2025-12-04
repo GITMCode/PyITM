@@ -38,48 +38,6 @@ def parse_args():
     return args
 
 
-def get_logdata(logfile, vars2plot, just_list=False):
-    logData = gitmio.read_logfile(logfile=logfile)
-    vars = []
-    for i, k in enumerate(logData.keys()):
-        vars.append(k)
-        if (just_list):
-            print('%02d. ' % i, vars[-1])
-
-    if (just_list):
-        exit()
-
-    iY_ = vars[1]
-    iM_ = vars[2]
-    iD_ = vars[3]
-    iH_ = vars[4]
-    iMi_ = vars[5]
-    iS_ = vars[6]
-
-    nTimes = len(logData[vars[0]])
-    times = []
-
-    for iT in range(nTimes):
-        year = int(logData[iY_][iT])
-        month = int(logData[iM_][iT])
-        day = int(logData[iD_][iT])
-        hour = int(logData[iH_][iT])
-        minute = int(logData[iMi_][iT])
-        second = int(logData[iS_][iT])
-        t = dt.datetime(year, month, day, hour, minute, second)
-        times.append(t)
-
-    data_to_plot = {'times': times,
-                    'note': logfile,
-                    'vars': []}
-        
-    for var in vars2plot:
-        print(var, vars[var])
-        data_to_plot['vars'].append(vars[var])
-        data_to_plot[vars[var]] = logData[vars[var]]
-    
-    return data_to_plot
-
 # ----------------------------------------------------------------------
 # Main Code
 # ----------------------------------------------------------------------
