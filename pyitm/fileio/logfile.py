@@ -71,6 +71,44 @@ def write_log(data, fileHeader = 'log', message = ''):
     return
 
 
+def calc_times(logdata):
+
+    times = []
+    iYear = -1
+    iMonth = -1
+    iDay = -1
+    iHour = -1
+    iMinute = -1
+    iSecond = -1
+    vars = list(logdata.keys())
+    if ('Year' in vars):
+        iYear = vars.index('Year')
+    if ('Month' in vars):
+        iMonth = vars.index('Month')
+    if ('Day' in vars):
+        iDay = vars.index('Day')
+    if ('Hour' in vars):
+        iHour = vars.index('Hour')
+    if ('Minute' in vars):
+        iMinute = vars.index('Minute')
+    if ('Second' in vars):
+        iSecond = vars.index('Second')
+    if ((iYear >= 0) and
+        (iMonth >= 0) and
+        (iDay >= 0) and
+        (iHour >= 0) and
+        (iMinute >= 0) and
+        (iSecond >= 0)):
+        for i, year in enumerate(logdata['Year']):
+            t = datetime(int(year),
+                         int(logdata['Month'][i]),
+                         int(logdata['Day'][i]),
+                         int(logdata['Hour'][i]),
+                         int(logdata['Minute'][i]),
+                         int(logdata['Second'][i]))
+            times.append(t)
+    return times
+
 #-----------------------------------------------------------------------------
 
 def read_logfile(logfilename=None, datadir=None, verbose=False):
@@ -106,8 +144,20 @@ def read_logfile(logfilename=None, datadir=None, verbose=False):
     logdata = {}
 
     saving = False
+    readVars = True
     with open(logfilename, 'r') as f:
         for n, line in enumerate(f.readlines()):
+            if (readVars):
+                v = line.strip()
+                if (len(v) < 1):
+                    readVars = False
+                else:
+                    logdata[v] = []
+                    vars.append(v)
+
+            if line.startswith('#VARIABLES'):
+                readVars = True
+                vars = []
             if saving:
                 # first line (after #START) has the headers
                 if len(logdata.keys()) == 0:
@@ -117,8 +167,6 @@ def read_logfile(logfilename=None, datadir=None, verbose=False):
                             col = col+'0'
                         vars.append(col)
                         logdata[col] = []
-                    if verbose:
-                        print(f"  -> Reading columns: {list(logdata.keys())}")
                 else:
                     # Read in the data
                     for col, val in zip(logdata.keys(), line.strip().split()):
@@ -128,7 +176,7 @@ def read_logfile(logfilename=None, datadir=None, verbose=False):
                 saving=True
                 if verbose:
                     print(f"  -> Found start of data at line {n}")
-
+                    print(f"  -> Reading columns : {list(logdata.keys())}")
     if verbose:
         print(f"  -> Read {len(logdata[list(logdata.keys())[0]])} lines of data")
 
@@ -141,4 +189,47 @@ def read_logfile(logfilename=None, datadir=None, verbose=False):
             pass
 
     return logdata
+
+
+def get_logdata(logfile, vars2plot, just_list=False):
+    logData = gitmio.read_logfile(logfile=logfile)
+    vars = []
+    for i, k in enumerate(logData.keys()):
+        vars.append(k)
+        if (just_list):
+            print('%02d. ' % i, vars[-1])
+
+    if (just_list):
+        exit()
+
+    iY_ = vars[1]
+    iM_ = vars[2]
+    iD_ = vars[3]
+    iH_ = vars[4]
+    iMi_ = vars[5]
+    iS_ = vars[6]
+
+    nTimes = len(logData[vars[0]])
+    times = []
+
+    for iT in range(nTimes):
+        year = int(logData[iY_][iT])
+        month = int(logData[iM_][iT])
+        day = int(logData[iD_][iT])
+        hour = int(logData[iH_][iT])
+        minute = int(logData[iMi_][iT])
+        second = int(logData[iS_][iT])
+        t = dt.datetime(year, month, day, hour, minute, second)
+        times.append(t)
+
+    data_to_plot = {'times': times,
+                    'note': logfile,
+                    'vars': []}
+        
+    for var in vars2plot:
+        print(var, vars[var])
+        data_to_plot['vars'].append(vars[var])
+        data_to_plot[vars[var]] = logData[vars[var]]
+    
+    return data_to_plot
 
