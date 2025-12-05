@@ -191,8 +191,8 @@ def read_logfile(logfilename=None, datadir=None, verbose=False):
     return logdata
 
 
-def get_logdata(logfile, vars2plot, just_list=False):
-    logData = gitmio.read_logfile(logfile=logfile)
+def get_logdata(logfilename, vars2plot, just_list=False):
+    logData = read_logfile(logfilename=logfilename)
     vars = []
     for i, k in enumerate(logData.keys()):
         vars.append(k)
@@ -202,32 +202,13 @@ def get_logdata(logfile, vars2plot, just_list=False):
     if (just_list):
         exit()
 
-    iY_ = vars[1]
-    iM_ = vars[2]
-    iD_ = vars[3]
-    iH_ = vars[4]
-    iMi_ = vars[5]
-    iS_ = vars[6]
-
-    nTimes = len(logData[vars[0]])
-    times = []
-
-    for iT in range(nTimes):
-        year = int(logData[iY_][iT])
-        month = int(logData[iM_][iT])
-        day = int(logData[iD_][iT])
-        hour = int(logData[iH_][iT])
-        minute = int(logData[iMi_][iT])
-        second = int(logData[iS_][iT])
-        t = dt.datetime(year, month, day, hour, minute, second)
-        times.append(t)
-
+    times = calc_times(logData)
+        
     data_to_plot = {'times': times,
-                    'note': logfile,
+                    'note': logfilename,
                     'vars': []}
         
     for var in vars2plot:
-        print(var, vars[var])
         data_to_plot['vars'].append(vars[var])
         data_to_plot[vars[var]] = logData[vars[var]]
     
