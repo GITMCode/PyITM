@@ -7,6 +7,42 @@ import datetime as dt
 import numpy as np
 
 #-----------------------------------------------------------------------------
+# inString = 'yyyy-mm-dd_hh:mm:ss.ms'
+#             0000000000111111111122
+#             0123456789012345678901
+# everything after the _ (including the _) is optional
+#-----------------------------------------------------------------------------
+
+def convert_string_to_datetime(inString):
+    iYear = int(inString[0:4])
+    if (len(inString) >= 6):
+        iMonth = int(inString[5:7])
+    else:
+        iMonth = 1
+    if (len(inString) >= 9):
+        iDay = int(inString[8:10])
+    else:
+        iDay = 1
+    if (len(inString) >= 12):
+        iHour = int(inString[11:13])
+    else:
+        iHour = 0
+    if (len(inString) >= 15):
+        iMinute = int(inString[14:16])
+    else:
+        iMinute = 0
+    if (len(inString) >= 18):
+        iSecond = int(inString[17:19])
+    else:
+        iSecond = 1
+    if (len(inString) >= 20):
+        ms = int(inString[20:])
+    else:
+        ms = 0
+    outTime = dt.datetime(iYear, iMonth, iDay, iHour, iMinute, iSecond, ms)
+    
+    return outTime
+#-----------------------------------------------------------------------------
 # 
 #-----------------------------------------------------------------------------
 
