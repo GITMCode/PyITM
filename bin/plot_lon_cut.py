@@ -9,7 +9,7 @@ import numpy as np
 import argparse
 
 import sys
-sys.path.insert(0,'/home/ridley/Software/PyITM/')
+#sys.path.insert(0,'/home/ridley/Software/PyITM/')
 
 from pyitm.fileio import gitmio, util
 from pyitm.modeldata import utils
@@ -78,13 +78,15 @@ def get_args():
 
 def plot_lon_cut_noblocks(args, allData):
 
+    nLons, nLats, nAlts = np.shape(allData['lons'])
+
     if (args.ilon > -1):
         iLon = args.ilon
         realLon = 0.0
     else:
         if (args.lon >= 0):
             lonGoal = args.lon
-            lons1d = allData['lons'][:, 0, 0]
+            lons1d = allData['lons'][:, int(nLats/2), 0]
             diff = np.abs(lons1d - lonGoal)
             iLon = np.argmin(diff)
             realLon = lons1d[iLon]
@@ -94,8 +96,22 @@ def plot_lon_cut_noblocks(args, allData):
 
     alts1d = allData['alts'][iLon, 0, :]
     lats1d = allData['lats'][iLon, :, 0]
-    altsEdge = utils.move_centers_to_edges(alts1d)
-    latsEdge = utils.move_centers_to_edges(lats1d)
+    # make this more generic:
+    alts2dr = np.zeros((nLats, nAlts+1))
+    alts2d = np.zeros((nLats+1, nAlts+1))
+    lats2dr = np.zeros((nLats+1, nAlts))
+    lats2d = np.zeros((nLats+1, nAlts+1))
+    for iAlt in range(nAlts):
+        lats2dr[:,iAlt] = utils.move_centers_to_edges(allData['lats'][iLon, :, iAlt])
+    for iLat in range(nLats+1):
+        lats2d[iLat,:] = utils.move_centers_to_edges(lats2dr[iLat,:])
+    for iLat in range(nLats):
+        alts2dr[iLat, :] = utils.move_centers_to_edges(allData['alts'][iLon, iLat, :])
+    for iAlt in range(nAlts+1):
+        alts2d[:, iAlt] = utils.move_centers_to_edges(alts2dr[:, iAlt])
+
+    #altsEdge = utils.move_centers_to_edges(alts1d)
+    #latsEdge = utils.move_centers_to_edges(lats1d)
 
     allSlices = utils.data_slice(allData, iLon = iLon)
     varName = allData['longname'][0]
@@ -139,8 +155,8 @@ def plot_lon_cut_noblocks(args, allData):
             title = title + '; Lon: %.0f deg' % realLon
         else:
             title = title + '; Zonal Average'
-        value2d = allSlices[iTime, :, :].transpose()
-        con = ax.pcolormesh(latsEdge, altsEdge, value2d, \
+        value2d = allSlices[iTime, :, :] #.transpose()
+        con = ax.pcolormesh(lats2d, alts2d, value2d, \
                             cmap = dataMinMax['cmap'], \
                             vmin = dataMinMax['mini'], \
                             vmax = dataMinMax['maxi'])
@@ -258,6 +274,10 @@ if __name__ == '__main__':
     args = get_args()
     filelist = args.filelist
     varToPlot = args.var
+
+    if (args.list):
+        util.list_file_info(filelist)
+        exit()
 
     allData = util.read_all_files(filelist, varToPlot, verbose = True)
 
