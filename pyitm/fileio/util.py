@@ -5,6 +5,7 @@ import re, os
 from glob import glob
 
 from pyitm.fileio import gitmio, netcdfio, variables, satelliteio, madrigalio
+from pyitm.fileio import ipeio
 from pyitm.modeldata import utils
 import numpy as np
 from glob import glob
@@ -31,13 +32,19 @@ def determine_filetype(filename):
         "iGitmBin": 0,
         "iGitmNetcdf": 1,
         "iNetcdf": 2,
+        "iIpe": 3,
         "myfile": -1
     }
     m = re.match(r'(.*)bin', filename)
     if m:
         fType["myfile"] = fType["iGitmBin"]
     else:
-        fType["myfile"] = fType["iNetcdf"]
+
+        isIpe = ipeio.check_whether_ipe(filename)
+        if (isIpe):
+            fType["myfile"] = fType["iIpe"]
+        else:
+            fType["myfile"] = fType["iNetcdf"]
     return fType
 
 # ----------------------------------------------------------------------------
@@ -134,14 +141,34 @@ def read_all_files(filelist, varsToRead = None, verbose = False):
         varsToRead = variables.convert_number_to_var(varsToRead, header)
         varsToRead = variables.get_short_names(varsToRead)
         varsToRead = variables.convert_var_to_number(varsToRead, header)
-        allData = gitmio.read_gitm_all_files(filelist, varsToRead, verbose=verbose)
+        allData = gitmio.read_gitm_all_files(filelist, \
+                                             varsToRead, \
+                                             verbose=verbose)
     if (filetype["myfile"] == filetype["iNetcdf"]):
         varsToRead = variables.convert_number_to_var(varsToRead, header)
         varsToRead = variables.match_var_name(varsToRead, header)
         if ('NotFound' in varsToRead):
             allData = None
         else:
-            allData = netcdfio.read_netcdf_all_files(filelist, varsToRead, verbose=verbose)
+            allData = netcdfio.read_netcdf_all_files(filelist, \
+                                                     varsToRead, \
+                                                     verbose=verbose)
+            
+    if (filetype["myfile"] == filetype["iIpe"]):
+
+        if (ipeio.is_grid_file(filelist[0])):
+            print(filelist[0])
+            allData = ipeio.read_ipe_grid_file(filelist[0])
+        else:
+            varsToRead = variables.convert_number_to_var(varsToRead, header)
+            varsToRead = variables.match_var_name(varsToRead, header)
+            if ('NotFound' in varsToRead):
+                allData = None
+            else:
+                allData = ipeio.read_ipe_all_files(filelist, \
+                                                      varsToRead, \
+                                                      verbose=verbose)
+
     if (isTec):
         tec = utils.calc_tec(allData)
         allData['tec'] = tec
@@ -168,6 +195,14 @@ def read_all_headers(filelist, verbose = False):
         if (verbose):
             print(' -> Reading NETCDF header --- Can only read one at a time!')
         header = netcdfio.read_netcdf_one_header(filelist[0])        
+        isFound = True
+    if (filetype["myfile"] == filetype["iIpe"]):
+        if (verbose):
+            print(' -> Reading NETCDF IPE header --- Can only read one at a time!')
+        if (ipeio.is_grid_file(filelist[0])):
+            header = ipeio.read_ipe_grid_header(filelist[0])        
+        else:
+            header = ipeio.read_ipe_one_header(filelist[0])        
         isFound = True
         
     if (not isFound):
