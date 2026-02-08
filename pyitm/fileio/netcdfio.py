@@ -10,6 +10,33 @@ from pyitm.general import time_conversion as tc
 
 from netCDF4 import Dataset
 
+def check_whether_ipe(filename):
+
+    state = False
+
+    with Dataset(filename, 'r') as ncfile:
+        # Process header information: nlons, nlats, nalts, nblocks
+        if (('x01' in ncfile.dimensions) and \
+            ('x02' in ncfile.dimensions) and \
+            ('x03' in ncfile.dimensions)):
+            state = True
+    ncfile.close
+
+    return state
+
+def check_whether_aether(filename):
+
+    state = False
+
+    with Dataset(filename, 'r') as ncfile:
+        # Process header information: nlons, nlats, nalts, nblocks
+        if (('lon' in ncfile.dimensions) and \
+            ('lat' in ncfile.dimensions) and \
+            ('z' in ncfile.dimensions)):
+            state = True
+    ncfile.close
+    return state
+
 class DataArray(np.ndarray):
     def __new__(cls, input_array, attrs={}):
         obj = np.asarray(input_array).view(cls)
