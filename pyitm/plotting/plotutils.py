@@ -45,11 +45,15 @@ def get_min_max_data(allSlices, yPos, \
         mask = ((yPos >= yMin) & (yPos <= yMax))
         if (mask.max()):    
             doPlot = True
-            maxi = allSlices[:, :, mask].max() * 1.01
-            mini = allSlices[:, :, mask].min() * 0.99
-            amaxi = np.abs(allSlices[:, :, mask]).max() * 1.05
-            stddev = np.std(allSlices[:, :, mask])
-            ave = np.mean(allSlices[:, :, mask])
+            if (len(np.shape(allSlices)) == 3):
+                values = allSlices[:, :, mask]
+            else:
+                values = allSlices[:, mask]
+            maxi = values.max() * 1.01
+            mini = values.min() * 0.99
+            amaxi = np.abs(values).max() * 1.05
+            stddev = np.std(values)
+            ave = np.mean(values)
             if (mini < ave - stdevFac*stddev):
                 mini = ave - stdevFac*stddev
             if (maxi > ave + stdevFac*stddev):
