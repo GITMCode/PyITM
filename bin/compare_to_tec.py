@@ -152,7 +152,6 @@ if __name__ == '__main__':
     americanRms = np.zeros(nTimesGitm)
     americannRms = np.zeros(nTimesGitm)
     for iT in range(len(iTimes)):
-
         # Get the data:
         iS = tecLocs['iStart'][iT]
         iE = tecLocs['iEnd'][iT]
@@ -241,9 +240,10 @@ if __name__ == '__main__':
     # Plot stuff in the american sector:
     l2d, t2d = np.meshgrid(lats1d, gitmData['times'])
     fig = plt.figure(figsize=(10, 10), dpi = dpi)
+    plt.rcParams.update({'font.size': 14})
     # 1 is bottom, 2 is top
-    ax1 = fig.add_axes([0.1, 0.05, 0.90, 0.4])
-    ax2 = fig.add_axes([0.1, 0.55, 0.90, 0.4])
+    ax1 = fig.add_axes([0.09, 0.055, 0.95, 0.42])
+    ax2 = fig.add_axes([0.09, 0.54, 0.95, 0.42])
     con1 = ax1.pcolor(t2d, l2d, americanCutModel, \
                        cmap = dataMinMax['cmap'], \
                        vmin = dataMinMax['mini'], \
@@ -276,19 +276,19 @@ if __name__ == '__main__':
     
     fig = plt.figure(figsize=(10, 10), dpi = dpi)
     # 1 is bottom, 2 is top
-    ax1 = fig.add_axes([0.1, 0.05, 0.85, 0.4])
-    ax2 = fig.add_axes([0.1, 0.55, 0.85, 0.4])
+    ax1 = fig.add_axes([0.08, 0.06, 0.87, 0.42])
+    ax2 = fig.add_axes([0.08, 0.54, 0.87, 0.42])
     # top plot:
     ax2.plot(gitmData['times'], \
              globalTecMean, color = 'b', label = 'TEC Measurement')
     ax2.plot(gitmData['times'], \
              globalModelMean, color = 'r', label = 'TEC Model Results')
-    ax2.plot(gitmData['times'], \
-             globalTecMedian, color = 'b', \
-             linestyle = ':', label = 'TEC Measurement (Median)')
-    ax2.plot(gitmData['times'], \
-             globalModelMedian, color = 'r', \
-             linestyle = ':', label = 'TEC Model Results (Median)')
+    #ax2.plot(gitmData['times'], \
+    #         globalTecMedian, color = 'b', \
+    #         linestyle = ':', label = 'TEC Measurement (Median)')
+    #ax2.plot(gitmData['times'], \
+    #         globalModelMedian, color = 'r', \
+    #         linestyle = ':', label = 'TEC Model Results (Median)')
     ax1.plot(gitmData['times'], \
                globalRms, color = 'c', label = 'RMS Difference')
     ax1.plot(gitmData['times'], \
