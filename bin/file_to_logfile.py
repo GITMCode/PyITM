@@ -82,6 +82,6 @@ if __name__ == '__main__':
             else:
                 logdata[var].append(integral)
 
-    logfile.write_log(logdata, fileHeader = 'log', message = message)
+    logfile.write_log(logdata, fileHeader = args.logfile, message = message)
                                     
     
