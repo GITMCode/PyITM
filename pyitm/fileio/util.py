@@ -143,6 +143,9 @@ def read_all_files(filelist, varsToRead = None, verbose = False):
         else:
             allData = netcdfio.read_netcdf_all_files(filelist, varsToRead, verbose=verbose)
     if (isTec):
+        test = np.shape(allData['alts'])
+        if (len(test) > 3):
+            allData['alts'] = allData['alts'][0,:,:,:]
         tec = utils.calc_tec(allData)
         allData['tec'] = tec
 
@@ -347,10 +350,15 @@ def read_satfiles(filelist=None, satname=None,
         # add the satellite data
         for key, value in data.items():
             if key in combined_data[name].keys():
-                combined_data[name][key] = np.concatenate((combined_data[name][key], value))
+                s = np.shape(value)
+                if (verbose):
+                    print(name, key, s)
+                if (len(s) > 2):
+                    combined_data[name][key] = np.concatenate((combined_data[name][key], value), axis=2)
+                else:
+                    combined_data[name][key] = np.concatenate((combined_data[name][key], value))
             else:
                 combined_data[name][key] = value
-    
     if verbose:
         print(f" -> Found sat data from satellites: {combined_data.keys()}")
         for satname in combined_data.keys():
