@@ -134,6 +134,8 @@ def read_ipe_grid_header(filename, verbose = False):
 
     data['shortname'] = variables.get_short_names(data['vars'])
     data['times'] = datetime(1965,1,1,0,0,0)
+
+    print(data['vars'])
     return data
 
 #--------------------------------------------------------------------------------------
@@ -308,8 +310,9 @@ def read_ipe_grid_file(filename, verbose = False):
 
     with Dataset(filename, 'r') as ncfile:
         alts2draw = np.array(ncfile.variables['altitude']) / 1000.0
-        lons3draw = np.array(ncfile.variables['longitude']) * 180.0 / np.pi
+        geolons3draw = np.array(ncfile.variables['longitude']) * 180.0 / np.pi
         lats2draw = 90.0 - np.array(ncfile.variables['m_colat']) * 180.0 / np.pi
+        geolats3draw = 90.0 - np.array(ncfile.variables['colatitude']) * 180.0 / np.pi
         iNorthTop_ = np.array(ncfile.variables['northern_top']).astype(np.int_)
         iSouthTop_ = np.array(ncfile.variables['southern_top']).astype(np.int_)
         iMax_ = np.array(ncfile.variables['tube_max']).astype(np.int_)
@@ -318,7 +321,7 @@ def read_ipe_grid_file(filename, verbose = False):
             'iSouthTop': iSouthTop_,
             'iMax': iMax_
         }
-        nLons, nLats, nAlts = np.shape(lons3draw)
+        nLons, nLats, nAlts = np.shape(geolons3draw)
         ipeGridShape['nLons'] = 0
         ipeGridShape['nLats'] = nLats
         ipeGridShape['nAlts'] = nAlts
@@ -326,14 +329,15 @@ def read_ipe_grid_file(filename, verbose = False):
         alts2d = reshape_ipe_array(alts2draw, ipeGridShape, verbose = verbose)
         lats2d = reshape_ipe_array(lats2draw, ipeGridShape)
         ipeGridShape['nLons'] = nLons
-        lons3d = reshape_ipe_array(lons3draw, ipeGridShape)
+        geolons3d = reshape_ipe_array(geolons3draw, ipeGridShape)
+        geolats3d = reshape_ipe_array(geolats3draw, ipeGridShape)
 
-    nLons, nLats, nAlts = np.shape(lons3d)
+    nLons, nLats, nAlts = np.shape(geolons3d)
     # lons is actually the geographic longitude instead of the magnetic
     # longitude.  Need to make up the magnetic longitude:
-    geolons3d = lons3d
     dLon = 360.0/(nLons)
     lons1d = np.arange(0, 360, dLon)
+    lons3d = np.zeros((nLons, nLats, nAlts))
     for iLat in range(nLats):
         for iAlt in range(nAlts):
             lons3d[:,iLat,iAlt] = lons1d
@@ -352,6 +356,7 @@ def read_ipe_grid_file(filename, verbose = False):
             'longname': variables.get_long_names(vars), \
             'lon': lons3d,
             'geolon': geolons3d,
+            'geolat': geolats3d,
             'lat': lats3d,
             'z': alts3d,
             'ipeGridShape': ipeGridShape,
