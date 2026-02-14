@@ -5,6 +5,7 @@ from datetime import datetime
 from struct import unpack
 import numpy as np
 from pyitm.fileio import util, variables, logfile
+from scipy.io import FortranFile
 
 #-----------------------------------------------------------------------------
 
@@ -331,3 +332,55 @@ def read_logfile(logfilename=None, datadir=None, verbose=False):
 
     logdata = logfile.read_logfile(logfilename, datadir, verbose)
     return logdata
+
+# ----------------------------------------------------------------------------
+# this will write out a single GITM output file.
+#  - file is the output file name
+#  - data is a dictionary that contains:
+#    - version
+#    - nLonsTotal
+#    - nLatsTotal
+#    - nAltsTotal
+#    - nVars
+#    - time
+#    - vars
+#    - all of the variable names (which should be the same as in vars
+#      including lon, lat, alt
+# ----------------------------------------------------------------------------
+
+def write_gitm_file(file, data, isVerbose = False):
+
+    if (isVerbose):
+        print(' -> Writing Fortran Binary file : ', file)
+    fp = FortranFile(file, 'w')
+
+    val = np.array([data["version"]], dtype = np.float64)
+    fp.write_record(val)
+    iVals = [data["nLonsTotal"], data["nLatsTotal"], data["nAltsTotal"]]
+    fp.write_record(np.array(iVals, dtype = np.int32))
+
+    # Write out variables!
+    val = np.array([data["nVars"]], dtype = np.int32)
+    fp.write_record(val)
+    for var in data["vars"]:
+        varpad = var.ljust(40).encode('utf-8')
+        fp.write_record(varpad)
+
+    # Write out time:
+    ymdhmsm = np.array([data["time"].year, \
+                        data["time"].month, \
+                        data["time"].day, \
+                        data["time"].hour, \
+                        data["time"].minute, \
+                        data["time"].second, \
+                        int(data["time"].microsecond/1000.0)], \
+                      dtype=np.int32)
+    fp.write_record(ymdhmsm)
+            
+    for iVar in np.arange(data["nVars"]):
+        v = data["vars"][iVar]
+        vals = np.array(data[v], dtype = np.float64)
+        fp.write_record(vals)
+    
+    fp.close()
+    
