@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import numpy as np
+import os
 
 # The general idea here is that each code has a bunch of variables that are
 # named in different ways.  What we essentially want for each code is that
@@ -13,6 +14,26 @@ import numpy as np
 # These codes then get a bit complicated, since they have to do all sorts
 # of interpreting of what you want versus what you provided.
 
+# ----------------------------------------------------------------------------
+#
+# ----------------------------------------------------------------------------
+
+def convert_filename(filename, convertFile = 'name_convert.csv'):
+    filenames = []
+    strings = []
+    if (os.path.exists(convertFile)):
+        with open(convertFile, 'r') as f:
+            lines = f.readlines()
+            for iLine, line in enumerate(lines):
+                fs = line.split(',')
+                filenames.append(fs[0])
+                strings.append(fs[1])
+        if (len(filenames) > 0):
+            iFile = find_string(filename, filenames)
+            return strings[iFile]
+        else:
+            return filename
+    
 # ----------------------------------------------------------------------------
 # This code takes something like 'Temperature (K)' and converts it to
 # 'Temperature'. This is extremely useful when naming files with variable names
