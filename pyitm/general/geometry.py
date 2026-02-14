@@ -13,11 +13,11 @@ import numpy as np
 
 def calc_areas(lons2d, lats2d, alt, rPlanet = 6372.0):
 
-    dlons2d = lons2d
+    dlons2d = lons2d * np.pi/180.0
     dlons2d[1:-1, :] = lons2d[2:, :] - lons2d[0:-2, :]
     dlons2d[0, :] = dlons2d[1, :]
     dlons2d[-1, :] = dlons2d[-2, :]
-    dlats2d = lats2d
+    dlats2d = lats2d * np.pi/180.0
     dlats2d[:, 1:-1] = lats2d[:, 2:] - lats2d[:, 0:-2]
     dlats2d[:, 0] = dlats2d[:, 1]
     dlats2d[:, -1] = dlats2d[:, -2]
