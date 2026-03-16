@@ -287,9 +287,15 @@ def read_netcdf_all_files(filelist, varlist=[-1], verbose=False):
             nLats = len(lats[0, 0, :, 0])
             nAlts = len(alts[0, 0, 0, :])
         else:
-            nLons = len(lons[:, 0, 0])
-            nLats = len(lats[0, :, 0])
-            nAlts = len(alts[0, 0, :])
+            if len(lons.shape) > 1:
+                nLons = len(lons[:, 0, 0])
+                nLats = len(lats[0, :, 0])
+                nAlts = len(alts[0, 0, :])
+            else:
+                nLons = len(lons)
+                nLats = len(lats)
+                nAlts = len(alts)
+
         nBlocks = 0
         
         if (nVars == 1):

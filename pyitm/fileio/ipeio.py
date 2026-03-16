@@ -14,6 +14,7 @@ from netCDF4 import Dataset
 #--------------------------------------------------------------------------------------
 
 def check_whether_ipe(filename):
+    # This will return False for an interpolated file since they can use Aether's reader
     state = False
     with Dataset(filename, 'r') as ncfile:
         # Process header information: nlons, nlats, nalts, nblocks
@@ -107,9 +108,14 @@ def read_ipe_grid_header(filename, verbose = False):
 
     with Dataset(filename, 'r') as ncfile:
         # Process header information: nlons, nlats, nalts, nblocks
-        data['nlons'] = len(ncfile.dimensions['phony_dim_2'])
-        data['nlats'] = len(ncfile.dimensions['phony_dim_0'])
-        data['nalts'] = len(ncfile.dimensions['phony_dim_1'])
+        try:
+            data['nlons'] = len(ncfile.dimensions['phony_dim_2'])
+            data['nlats'] = len(ncfile.dimensions['phony_dim_0'])
+            data['nalts'] = len(ncfile.dimensions['phony_dim_1'])
+        except KeyError:
+            data['nlons'] = len(ncfile.dimensions['lon'])
+            data['nlats'] = len(ncfile.dimensions['lat'])
+            data['nalts'] = len(ncfile.dimensions['z'])
         data['nblocks'] = 0
 
         # Included for compatibility
@@ -196,11 +202,14 @@ def read_ipe_one_header(filename):
             data['nlons'] = len(ncfile.dimensions['x01'])
             data['nlats'] = len(ncfile.dimensions['x02'])
             data['nalts'] = len(ncfile.dimensions['x03'])
-        else:
+        elif ('phony_dim_0' in ncfile.dimensions):
             data['nlons'] = len(ncfile.dimensions['phony_dim_0'])
             data['nlats'] = len(ncfile.dimensions['phony_dim_1'])
             data['nalts'] = len(ncfile.dimensions['phony_dim_2'])
-
+        else:
+            data['nlons'] = len(ncfile.dimensions['lon'])
+            data['nlats'] = len(ncfile.dimensions['lat'])
+            data['nalts'] = len(ncfile.dimensions['z'])
         data['nblocks'] = 0
 
         # Included for compatibility
