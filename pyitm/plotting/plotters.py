@@ -37,6 +37,7 @@ def plot_series_of_slices(allSlices,
                           xLabel = '',
                           yLabel = '',
                           filenamePrefix = '',
+                          setAspect = True,
                           xLimits = [0, 0],
                           yLimits = [0, 0],
                           dpi = 120):
@@ -56,7 +57,8 @@ def plot_series_of_slices(allSlices,
             ax.set_xlim(xLimits)
         if (yLimits[1] > yLimits[0]):
             ax.set_ylim(yLimits)
-        ax.set_aspect(1.0)
+        if (setAspect):
+            ax.set_aspect(1.0)
         ax.set_title(title)
         ax.set_xlabel(xLabel)
         ax.set_ylabel(yLabel)
