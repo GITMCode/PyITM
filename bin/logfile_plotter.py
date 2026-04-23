@@ -7,7 +7,7 @@ import sys
 import argparse
 import datetime as dt
 
-from pyitm.fileio import logfile
+from pyitm.fileio import logfile, controlfile
 from pyitm.modeldata import utils
 from pyitm.plotting import line_plots
 from pyitm.general import time_conversion
@@ -58,8 +58,8 @@ def parse_args():
                         help = 'file to use to describe logfiles and styles',
                         default = 'none')
 
-    parser.add_argument('-xlabel',
-                        help = 'label for the x-axis',
+    parser.add_argument('-ylabel',
+                        help = 'label for the y-axis',
                         default = 'none')
 
     parser.add_argument('-start',
@@ -81,6 +81,10 @@ def parse_args():
                         help = 'Maximum value for y-axis',
                         default = -1e32)
 
+    parser.add_argument('-dpi', type = int,
+                        help = 'Maximum value for y-axis',
+                        default = 120)
+    
     parser.add_argument('-vars',
                         help = 'var(s) to plot (e.g. -vars 0 or -vars 0 1 2',
                         default = [7], nargs = '+', type = int)
@@ -88,55 +92,18 @@ def parse_args():
     parser.add_argument('-list',  \
                         action='store_true', default = False, \
                         help = 'List variables in log file')
+    
+    parser.add_argument('-log',  \
+                        action='store_true', default = False, \
+                        help = 'Make the y-axis log scale')
+
+    parser.add_argument('-median',  \
+                        default = -1, type = float, \
+                        help = 'Remove the median value from the data for first N hours')
 
     args = parser.parse_args()
 
     return args
-
-
-def read_logfile_styles(csvFile):
-
-    # format is:
-    # logfilename1,varToRead1,label,linestyle,linewidth,linecolor
-    # logfilename2,varToRead2,label,linestyle,linewidth,linecolor
-    # logfilename3,varToRead3,label,linestyle,linewidth,linecolor
-
-    filenames = []
-    vars = []
-    labels = []
-    widths = []
-    styles = []
-    colors = []
-
-    print('Reading Controller CSV file :', csvFile)
-    
-    with open(csvFile, 'r') as f:
-        lines = f.readlines()
-        f.close()
-        if (len(lines) > 5):
-            i = 0
-            while (i < len(lines)):
-                l = lines[i].strip().split(',')
-                print('  -> controls : ', l)
-                filenames.append(l[0])
-                vars.append([int(l[1])])
-                labels.append(l[2])
-                styles.append(l[3])
-                widths.append(float(l[4]))
-                colors.append(l[5])
-                i = i + 1
-                if (i < len(lines)):
-                    if (len(lines[i].strip()) < 2):
-                        i = len(lines)
-
-    controller = {'files': filenames,
-                  'vars': vars,
-                  'labels': labels,
-                  'widths': widths,
-                  'styles': styles,
-                  'colors': colors}
-    return controller
-
 
 # ----------------------------------------------------------------------
 # Main Code
@@ -147,9 +114,12 @@ plt.rcParams.update({'font.size': 14})
 
 useController = False
 if (args.csv != 'none'):
-    controller = read_logfile_styles(args.csv)
+    controller = controlfile.read_logfile_styles(args.csv)
     if (len(controller['files']) > 0):
         useController = True
+    else:
+        print('Controller file provided, but something went wrong! Stopping!')
+        exit()
 
 if (useController):
     filenames = controller['files']
@@ -162,7 +132,6 @@ if (useController):
 else:
     filenames = args.files
     vars0 = args.vars
-    print(vars0)
     vars = []
     color = None
     linestyle = None
@@ -177,10 +146,10 @@ else:
     for f in filenames:
         vars.append(vars0)
 
-if (args.xlabel != 'none'):
-    xlabel = args.xlabel
+if (args.ylabel != 'none'):
+    ylabel = args.ylabel
 else:
-    xlabel = None
+    ylabel = None
     
 plotfile = args.plotfile
 
@@ -214,13 +183,16 @@ else:
 if len(filenames) > 1:
     # create fig & ax from first logfile
     fig, ax = line_plots.lineplot_data(data_to_plot,
+                                       logScale = args.log,
+                                       dpi = args.dpi,
                                        outFile=None,
-                                       xlabel = xlabel,
+                                       ylabel = ylabel,
                                        label = label,
                                        title = title,
                                        color = color,
                                        linestyle = linestyle,
                                        linewidth = linewidth,
+                                       medianTime = args.median,
                                        yMin = yMin,
                                        yMax = yMax,
                                        xStart = xStart,
@@ -240,12 +212,15 @@ if len(filenames) > 1:
         if iFile < len(filenames) - 1:
             fig, ax = line_plots.lineplot_data(data_to_plot,
                                                outFile=None, fig=fig, ax=ax,
-                                               xlabel = xlabel,
+                                               dpi = args.dpi,
+                                               logScale = args.log,
+                                               ylabel = ylabel,
                                                label = label,
                                                title = title,
                                                color = color,
                                                linestyle = linestyle,
                                                linewidth = linewidth,
+                                               medianTime = args.median,
                                                yMin = yMin,
                                                yMax = yMax,
                                                xStart = xStart,
@@ -257,15 +232,18 @@ if len(filenames) > 1:
                 nLabels = 0
             line_plots.lineplot_data(data_to_plot,
                                      outFile=plotfile,
+                                     logScale = args.log,
                                      fig=fig,
                                      ax=ax,
-                                     xlabel = xlabel,
+                                     dpi = args.dpi,
+                                     ylabel = ylabel,
                                      title = title,
                                      label = label,
                                      nLabels = nLabels,
                                      color = color,
                                      linestyle = linestyle,
                                      linewidth = linewidth,
+                                     medianTime = args.median,
                                      yMin = yMin,
                                      yMax = yMax,
                                      xStart = xStart,
@@ -274,12 +252,15 @@ else:
     # just plot single file
     print('plotting...')
     line_plots.lineplot_data(data_to_plot, outFile=args.plotfile,
-                             xlabel = xlabel,
+                             logScale = args.log,
+                             dpi = args.dpi,
+                             ylabel = ylabel,
                              title = title,
                              label = label,
                              color = color,
                              linestyle = linestyle,
                              linewidth = linewidth,
+                             medianTime = args.median,
                              yMin = yMin,
                              yMax = yMax,
                              xStart = xStart,
