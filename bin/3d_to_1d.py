@@ -102,7 +102,6 @@ if __name__ == '__main__':
                     dataOut[var][0,0,iAlt] = integral
                 else:
                     value = integral / totalarea1d[iAlt]
-                    print(var, iAlt, value)
                     dataOut[var][0,0,iAlt] = value
 
         gitmio.write_gitm_file(fileOut, dataOut, isVerbose = True)
