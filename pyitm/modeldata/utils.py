@@ -395,17 +395,22 @@ def move_centers_to_corners(pos2d):
 #-----------------------------------------------------------------------------
 
 def vertically_integrate(value, alts, calc3D = False):
-    [nLons, nLats, nAlts] = value.shape
-    integrated = np.zeros((nLons, nLats, nAlts))
+    s = value.shape
+    if (len(s) == 3):
+        [nLons, nLats, nAlts] = value.shape
+        integrated = np.zeros((nLons, nLats, nAlts))
+    if (len(s) == 4):
+        [nBlocks, nLons, nLats, nAlts] = value.shape
+        integrated = np.zeros((nBlocks, nLons, nLats, nAlts))
     descending = np.arange(nAlts-2, -1, -1)
     # This is done with elipses instead of colon in case a file has 1D coords (nc)
     dz = alts[...,-1] - alts[...,-2]
-    integrated[:,:,-1] = value[:,:,-1] * dz
+    integrated[...,-1] = value[...,-1] * dz
     for i in descending:
         dz = alts[...,i+1] - alts[...,i]
-        integrated[:,:,i] = integrated[:,:,i+1] + value[:,:,i] * dz
+        integrated[...,i] = integrated[...,i+1] + value[...,i] * dz
     if (not calc3D):
-        integrated = integrated[:,:,0]
+        integrated = integrated[...,0]
     return integrated
 
 # ----------------------------------------------------------------------------
@@ -442,13 +447,22 @@ def calc_tec(allData3D):
     nVars = allData3D['nvars']
     nLons = allData3D['nlons']
     nLats = allData3D['nlats']
+    nBlocks = allData3D['nblocks']
     alts1d = allData3D['alts']
 
-    slices = np.zeros((nTimes, nLons, nLats))
+    if (nBlocks == 0):
+        slices = np.zeros((nTimes, nLons, nLats))
+    else:
+        slices = np.zeros((nTimes, nBlocks, nLons, nLats))
     for iTime in range(nTimes):
-        tec2d = vertically_integrate(allData3D['data'][iTime, :, :, :], alts1d)
-        # Convert km->m and /m3 to TECU
-        slices[iTime, :, :] = tec2d[:, :] * 1000.0 / 1e16
+        if (nBlocks == 0):
+            tec2d = vertically_integrate(allData3D['data'][iTime, :, :, :], alts1d)
+            # Convert km->m and /m3 to TECU
+            slices[iTime, :, :] = tec2d[:, :] * 1000.0 / 1e16
+        else:
+            tec3d = vertically_integrate(allData3D['data'][iTime, :, :, :, :], alts1d)
+            # Convert km->m and /m3 to TECU
+            slices[iTime, :, :, :] = tec3d[:, :, :] * 1000.0 / 1e16
     return slices
 
 
