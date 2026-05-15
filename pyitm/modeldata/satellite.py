@@ -131,7 +131,16 @@ def extract_1d(sat_locations, model_data, interpVar=None,
     r = rp + diff * np.cos(np.deg2rad(goceLatsAll))
     correction = r - rgitm
     sat_locations['alts'] = goceAltsAll + correction
-    
+
+    doLimitLon = False
+    if (np.max(lons) < 360.):
+        print(' -> Model solution does not got to 360 deg longitude. Limiting points.')
+        doLimitLon = True
+        satLons = sat_locations['lons']
+        maxLons = np.max(lons)
+        satLons[satLons > maxLons - dLon] = maxLons - dLon
+        sat_locations['lons'] = satLons
+        
     for i, time in enumerate(sat_locations['times']):
         
         while model_data['times'][itb4 + 1] < time:
