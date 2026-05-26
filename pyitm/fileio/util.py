@@ -415,6 +415,9 @@ def read_satfiles(filelist=None, satname=None,
         if 'grace' in satnames[-1].lower():
             # ga_dns_...
             satnames[-1] = 'GRACE'+f.split('/')[-1][1]
+        if 'swarm' in satnames[-1].lower():
+            # sa_dns_...
+            satnames[-1] = 'SWARM'+f.split('/')[-1][1]
 
     combined_data = {}
     unique_names = []
