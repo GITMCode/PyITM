@@ -177,7 +177,6 @@ def read_gitm_one_file(file_to_read, varlist=[-1], verbose=True):
             "data": {},
             }
 
-    print(' -> Reading GITM file: ', file_to_read)
     with open(file_to_read, 'rb') as f:
     
         # This is all reading header stuff:
@@ -256,7 +255,7 @@ def read_gitm_all_files(filelist, varlist=[-1], verbose=False):
 
     # first read in spatial information:
     vars = [0, 1, 2]
-    spatialData = read_gitm_one_file(filelist[0], vars, verbose=False)["data"]
+    spatialData = read_gitm_one_file(filelist[0], vars, verbose=verbose)["data"]
 
     lons = np.degrees(spatialData[0])  # Convert from rad to deg
     nLons = len(lons[:, 0, 0])
@@ -269,7 +268,7 @@ def read_gitm_all_files(filelist, varlist=[-1], verbose=False):
     if varlist != [-1]:
        nVars = len(varlist)
     else: # varlist=[-1] means we read in all variables
-        nVars = read_gitm_headers(filelist[0], verbose=False)['nvars']
+        nVars = read_gitm_headers(filelist[0], verbose=verbose)['nvars']
         varlist = list(range(nVars))
 
     if (nVars == 1):

@@ -58,7 +58,7 @@ def read_netcdf_one_file(filename, file_vars = None, verbose = False):
     Parameters
     ----------
     filename : str
-        An Aether netCDF filename
+        A netCDF filename
     file_vars : list or NoneType
         List of desired variable neames to read, or None to read all
         (default=None)
