@@ -36,7 +36,7 @@ def write_log(data, fileHeader = 'log', message = ''):
         if (np.isscalar(data['alt'])):
             alt = data['alt']
         else:
-            alt = mean(np.array(data['alt']))
+            alt = np.mean(np.array(data['alt']))
         sLine = '%f' % alt
         write_line(fp, '')
         write_line(fp, '#ALTITUDE')
