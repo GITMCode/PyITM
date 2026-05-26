@@ -1,15 +1,9 @@
 #!/usr/bin/env python3
-""" This is a simple lat/lon plotter
+""" This is a simple lat/lon plotter with polar dials
 """
 
-import matplotlib as mpl
-mpl.use('Agg')
-import matplotlib.pyplot as plt
 import numpy as np
 import argparse
-
-import sys
-sys.path.insert(0,'/home/ridley/Software/PyITM/')
 
 from pyitm.fileio import util
 from pyitm.modeldata import utils
