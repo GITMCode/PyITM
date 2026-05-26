@@ -14,3 +14,6 @@ dependencies = [
   "cartopy",
   "scipy"
 ]
+
+[project.optional-dependencies]
+dev = ["pytest", "pytest-cov"]
