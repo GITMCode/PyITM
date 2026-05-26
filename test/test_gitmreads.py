@@ -3,10 +3,6 @@
 # This file is meant to test all the read routines we have available
 
 # Nothing is actually done other than reading data in
-import sys
-sys.path.insert(0,'/home/ridley/Software/PyITM/')
-
-import os
 from pyitm.fileio import util
 from pyitm.general import system
 
@@ -75,4 +71,4 @@ system.run_command(command, verbose =True)
 #     print([d for d in dat['data']])
 
 
-print("good work chump")
+print("all ok")
