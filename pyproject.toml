@@ -6,4 +6,11 @@ build-backend = "flit_core.buildapi"
 name = "pyitm"
 description = "Some code to help manage ITM outputs"
 authors = [{name = "Aarons"}]
-version="0.0.1"
+version="0.1.1"
+dependencies = [
+  "numpy",
+  "netCDF4",
+  "matplotlib",
+  "cartopy",
+  "scipy"
+]
