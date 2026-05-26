@@ -120,14 +120,28 @@ def read_netcdf_one_file(filename, file_vars = None, verbose = False):
         data['vars'] = [var for var in ncfile.variables.keys()
                         if file_vars is None or var in file_vars]
 
+        for dim in ['lon', 'lat', 'z']:
+            if dim not in data['vars']:
+                data['vars'].append(dim)
+
         # Fetch requested variable data
         for key in data['vars']:
-            var = ncfile.variables[key]  # key is var name
-            data[key] = DataArray(np.array(var), var.__dict__)
-            data['units'][key] = var.units if 'units' in var.__dict__ else ''
+            if verbose:
+                print('   -> Reading variable : ', key)
+            try:
+                var = ncfile.variables[key]  # key is var name
+                data[key] = DataArray(np.array(var), var.__dict__)
+                data['units'][key] = var.units if 'units' in var.__dict__ else ''
+            except KeyError:
+                if key =='z':
+                    data[key] = DataArray(np.array([100]), )
+                    data['units'][key] = 'km'
+                else:
+                    raise 
 
-        if 'since' in ncfile.variables['time'].units:
-            t0 = ncfile.variables['time'].units.split('since')[-1].strip()
+        time_units = getattr(ncfile.variables['time'], 'units', '')
+        if 'since' in time_units:
+            t0 = time_units.split('since')[-1].strip()
             t0 = datetime.strptime(t0, '%Y-%m-%d')
             if verbose:
                 print('   -> Time conversion using t0 = ', t0)
@@ -135,7 +149,7 @@ def read_netcdf_one_file(filename, file_vars = None, verbose = False):
             t0 = datetime(1965, 1, 1)
 
         data['times'] = \
-            tc.epoch_to_datetime(np.array(ncfile.variables['time'])[0], t0=t0)
+            tc.epoch_to_datetime(np.array(ncfile.variables['time']), t0=t0)
 
         try:
             data['isEnsemble'] = True if ncfile.isEnsemble == "True" else False
@@ -225,10 +239,11 @@ def read_netcdf_one_header(filename):
                 else:
                     data['longname'].append(key)
         
-        if 'since' in ncfile.variables['time'].units:
-            t0 = ncfile.variables['time'].units.split('since')[-1].strip()
+        time_units = getattr(ncfile.variables['time'], 'units', '')
+        if 'since' in time_units:
+            #TODO: Get this working for seconds/days/hours
+            t0 = time_units.split('since')[-1].strip()
             t0 = datetime.strptime(t0, '%Y-%m-%d')
-            
         else:
             t0 = datetime(1965, 1, 1)
         data['times'] = \
@@ -263,79 +278,63 @@ def read_netcdf_all_files(filelist, varlist=[-1], verbose=False):
                          "function.\n\tProvided: " + str(prefixes))
 
     # first read in spatial information:
-    vars = ['lon', 'Longitude', 'lat', 'Latitude', 'z', 'Altitude']
-    spatialData = read_netcdf_one_file(filelist[0], vars, verbose=False)
+    # vars = ['lon', 'Longitude', 'lat', 'Latitude', 'z', 'Altitude']
+    # spatialData = read_netcdf_one_file(filelist[0], vars, verbose=False)
 
-    nTimes = len(filelist)
+    header = read_netcdf_one_header(filelist[0])
+    if len(filelist)==1:
+        nTimes = len(header['times'])
+    else:
+        nTimes = len(filelist)
     if varlist != [-1]:
        nVars = len(varlist)
     else: # varlist=[-1] means we read in all variables
-        header = read_netcdf_one_header(filelist[0], verbose=False)
         varlist = header['vars']
         nVars = len(varlist)
 
+    nBlocks = header['nblocks']
+    nLons = header['nlons']
+    nLats = header['nlats']
+    nAlts = header['nalts']
+
     allTimes = []
-    if (spatialData['nblocks'] == 0):
-        # This assumes we have 3D arrays for the coord info.
-        # GITM will put 1D arrays into lon/lat/z if it can, which we don't want.   
-        lons = spatialData['Longitude' if 'Longitude' in spatialData.keys() else 'lon']
-        lats = spatialData['Latitude' if 'Latitude' in spatialData.keys() else 'lat']
-        alts = spatialData['Altitude' if 'Altitude' in spatialData.keys() else 'z'] / 1000.0  # Convert from m to km
-        nDims = len(np.shape(lons))
-        if (nDims == 4):
-            nLons = len(lons[0, :, 0, 0])
-            nLats = len(lats[0, 0, :, 0])
-            nAlts = len(alts[0, 0, 0, :])
-        else:
-            if len(lons.shape) > 1:
-                nLons = len(lons[:, 0, 0])
-                nLats = len(lats[0, :, 0])
-                nAlts = len(alts[0, 0, :])
-            else:
-                nLons = len(lons)
-                nLats = len(lats)
-                nAlts = len(alts)
 
-        nBlocks = 0
-        
-        if (nVars == 1):
-            allData = np.zeros((nTimes, nLons, nLats, nAlts))
-        else:
-            allData = np.zeros((nTimes, nVars, nLons, nLats, nAlts))
+    # Make output holder! its shape is conditional. Order of axis:
+    # nTimes, nVars, nBlocks, nLons, nLats, nAlts
+    # If nBlocks==1, it's squeezed
+    out_shape = []
+    out_shape.append(nTimes)
+    out_shape.append(nVars)
+    if nBlocks > 1:
+        out_shape.append(nBlocks)
+    out_shape.append(nLons)
+    out_shape.append(nLats)
+    out_shape.append(nAlts)
 
-    else:
-            
-        # we will now have a block dimension, and the latitude and
-        # longitude could be dependent on block, lon, and lat:
-        lons = spatialData['lon']
-        nLons = len(lons[0, :, 0, 0])
-        lats = spatialData['lat']
-        nLats = len(lats[0, 0, :, 0])
-        alts = spatialData['z'] / 1000.0  # Convert from m to km
-        nAlts = len(alts[0, 0, 0, :])
-        nBlocks = len(lons[:, 0, 0, 0])
-        
-        if (nVars == 1):
-            allData = np.zeros((nTimes, nBlocks, nLons, nLats, nAlts))
-        else:
-            allData = np.zeros((nTimes, nVars, nBlocks, nLons, nLats, nAlts))
+    allData = np.zeros(out_shape)
 
-    for iTime, filename in enumerate(filelist):
+    # We may be reading a file with multiple times...
+    # If multiiple times are in one file, we can advance time independent from 
+    # the filelist loop
+    iAllTimes = 0
+    for filename in filelist:
         data = read_netcdf_one_file(filename, varlist, verbose=verbose)
-        allTimes.append(data["times"])
-        for iVar, var in enumerate(varlist):
-            if (nBlocks == 0):
+        for iTime in range(len(data["times"])):
+            allTimes.append(data["times"][iTime])
+            for iVar, var in enumerate(varlist):
                 if (nVars == 1):
-                    allData[iTime, :, :, :] = data[var][:, :, :]
+                    allData[iAllTimes, ...] = data[var][iTime, ...]
                 else:
-                    allData[iTime, iVar, :, :, :] = data[var][:, :, :]
-            else:
-                if (nVars == 1):
-                    allData[iTime, :, :, :, :] = data[var][:, :, :, :]
-                else:
-                    allData[iTime, iVar, :, :, :, :] = data[var][:, :, :, :]
-                
+                    allData[iAllTimes, iVar, ...] = data[var][iTime, ...]
+            iAllTimes += 1
     vars = []
+    lons = data.pop('Longitude' if 'Longitude' in data.keys() else 'lon')
+    lats = data.pop('Latitude' if 'Latitude' in data.keys() else 'lat')
+    alts = data.pop('Altitude' if 'Altitude' in data.keys() else 'z')
+    # Coordinates may already be multi-dimensional (blocked grids store per-point values).
+    # Only meshgrid when all three are 1D coordinate vectors.
+    if lons.ndim == 1 and lats.ndim == 1 and alts.ndim == 1:
+        lons, lats, alts = np.meshgrid(lons, lats, alts, indexing='ij')
     for var in varlist:
         vars.append(var)
 
@@ -353,7 +352,6 @@ def read_netcdf_all_files(filelist, varlist=[-1], verbose=False):
             'nlons' : nLons,
             'nlats': nLats,
             'nalts': nAlts}
-    
     return data
 
 
