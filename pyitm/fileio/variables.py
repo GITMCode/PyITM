@@ -3,6 +3,77 @@
 import numpy as np
 import os
 
+
+# ----------------------------------------------------------------------------
+# CSV-based variable mapping loader
+# ----------------------------------------------------------------------------
+
+def _load_variable_csv(csv_path=None):
+    """Load variables.csv and return structured variable data.
+
+    Parses everything after the ``#START`` marker. Each row becomes a dict
+    with keys: shortname, longname, unit, prettyname, modelnames (list).
+    Semicolons in model-name columns are replaced with commas so that
+    model names like ``Vn(up,O(3P))`` can be stored in a comma-delimited file.
+
+    Args:
+        csv_path: Path to the CSV file. Defaults to variables.csv in the
+            same directory as this module.
+
+    Returns:
+        rows: list of row dicts (one per variable).
+        alias_index: dict mapping any known name (lowercase) to its row.
+            Keys include shortname, longname, and all model-name aliases.
+    """
+    if csv_path is None:
+        csv_path = os.path.join(os.path.dirname(__file__), 'variables.csv')
+
+    rows = []
+    alias_index = {}
+
+    with open(csv_path, 'r') as f:
+        lines = f.readlines()
+
+    started = False
+    for line in lines:
+        line = line.strip()
+        if line == '#START':
+            started = True
+            continue
+        if not started or not line or line.startswith('#'):
+            continue
+
+        parts = [p.strip() for p in line.split(',')]
+        if len(parts) < 2:
+            continue
+
+        row = {
+            'shortname': parts[0],
+            'longname': parts[1] if len(parts) > 1 else parts[0],
+            'unit': parts[2] if len(parts) > 2 else '',
+            'prettyname': parts[3] if len(parts) > 3 else '',
+            'modelnames': []
+        }
+
+        # Columns 4+ are model name aliases
+        for i in range(4, len(parts)):
+            alias = parts[i].strip()
+            if alias:
+                # Semicolons stand for commas in model names
+                alias_real = alias.replace(';', ',')
+                row['modelnames'].append(alias_real)
+
+        rows.append(row)
+
+        # Build reverse index: shortname, longname, and all aliases -> row
+        alias_index[row['shortname'].lower()] = row
+        alias_index[row['longname'].lower()] = row
+        for alias in row['modelnames']:
+            alias_index[alias.lower()] = row
+
+    return rows, alias_index
+
+
 # The general idea here is that each code has a bunch of variables that are
 # named in different ways.  What we essentially want for each code is that
 # you can call a plotter or reader with variable names in different ways:
@@ -19,6 +90,15 @@ import os
 # ----------------------------------------------------------------------------
 
 def convert_filename(filename, convertFile = 'name_convert.csv'):
+    """Look up a filename in a CSV mapping file and return the converted name.
+
+    Args:
+        filename: The filename to convert.
+        convertFile: Path to a two-column CSV mapping old names to new names.
+
+    Returns:
+        The converted filename, or the original if no mapping is found.
+    """
     filenames = []
     strings = []
     if (os.path.exists(convertFile)):
@@ -40,7 +120,11 @@ def convert_filename(filename, convertFile = 'name_convert.csv'):
 # ----------------------------------------------------------------------------
 
 def strip_varname(varnameIn):
+    """Strip a parenthesized unit suffix from a variable name.
 
+    'Temperature (K)' -> 'Temperature '
+    'Vn(east)'        -> 'Vn(east)'  (unchanged, no space before paren)
+    """
     ind = varnameIn.find('(')
     if (ind > 0):
         varnameOut = varnameIn[0:ind]
@@ -54,6 +138,7 @@ def strip_varname(varnameIn):
 # ----------------------------------------------------------------------------
 
 def find_string(item, stringList):
+    """Return the index of *item* in *stringList*, or -1 if not found."""
     iVal = -1
     if (item in stringList):
         i = 0
@@ -73,7 +158,12 @@ def find_string(item, stringList):
 # ----------------------------------------------------------------------------
 
 def convert_number_to_var(varList, header = None):
+    """Convert numeric variable indices to variable names using a file header.
 
+    Accepts a single value or list of values. Numbers (int or numeric string)
+    are replaced with the corresponding variable name from ``header['vars']``.
+    Non-numeric strings are passed through unchanged.
+    """
     if (np.isscalar(varList)):
         if (not isinstance(varList, str)):
             varList = '%d' % int(varList)
@@ -103,7 +193,11 @@ def convert_number_to_var(varList, header = None):
 # ----------------------------------------------------------------------------
 
 def convert_var_to_number(varList, header = None):
+    """Convert variable names to their numeric indices in a file header.
 
+    Accepts a single value or list. Tries matching against header['shortname'],
+    header['vars'], and header['longname'] in that order.
+    """
     if (np.isscalar(varList)):
         if (varList.isnumeric()):
             iVars = [int(varList)]
@@ -148,7 +242,11 @@ def convert_var_to_number(varList, header = None):
 #-----------------------------------------------------------------------------
 
 def match_var_name(varsIn, header):
+    """Match user-provided variable names against a file header (case-insensitive).
 
+    Checks header['vars'], header['longname'], and header['shortname']
+    in that order. Raises KeyError if a variable cannot be matched.
+    """
     varsOut = []
 
     for varIn in varsIn:
@@ -175,269 +273,129 @@ def match_var_name(varsIn, header):
 
     return varsOut
 
-#-----------------------------------------------------------------------------
-# remap gitm variables - turn the output of GITM into human-digestible
-# names AND add units to them.
-#-----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
+# CSV-backed variable name mapping functions
+# All mappings are now defined in variables.csv
+# ----------------------------------------------------------------------------
+
+_ROWS = None
+_INDEX = None
+
+def _ensure_loaded():
+    global _ROWS, _INDEX
+    if _ROWS is None:
+        _ROWS, _INDEX = _load_variable_csv()
+
 
 def remap_variable_names(varsIn):
+    """Map model output names -> 'shortname (unit)'.
 
-    mapVars = {
-        'Rho' : 'rho (km/m3)',
-        'den' : 'rho (km/m3)',
-        '[O(3P)]': '[O] (/m3)',
-        '[O2]': '[O2] (/m3)',
-        '[N2]': '[N2] (/m3)',
-        '[N(4S)]': '[N] (/m3)',
-        '[NO]': '[NO] (/m3)',
-        '[He]': '[He] (/m3)',
-        '[N(2D)]': '[N_2D] (/m3)',
-        '[N(2P)]': '[N_2P] (/m3)',
-        '[H]': '[H] (/m3)',
-        '[CO2]': '[CO2] (/m3)',
-        '[O(1D)]': '[O_1D] (/m3)',
-        'Temperature': 'Tn (K)',
-        'Vn(east)': 'Ve (m/s)',
-        'Vn(north)': 'Vn (m/s)',
-        'Vn(up)': 'Vv (m/s)',
-        'Vn(up,O(3P))': 'Vv_O (m/s)',
-        'Vn(up,O2)': 'Vv_O2 (m/s)',
-        'Vn(up,CO2)': 'Vv_CO2 (m/s)',
-        'Vn(up,N2)': 'Vv_N2 (m/s)',
-        'Vn(up,N(4S))': 'Vv_N (m/s)',
-        'Vn(up,NO)': 'Vv_NO (m/s)',
-        'Vn(up,He)': 'Vv_He (m/s)',
-        '[O_4SP_+]': '[O+] (/m3)',
-        'o_plus_density': '[O+] (/m3)',
-        '[NO+]': '[NO+] (/m3)',
-        '[O2+]': '[O2+] (/m3)',
-        '[N2+]': '[N2+] (/m3)',
-        '[N+]': '[N+] (/m3)',
-        '[O(2D)+]': '[O_2D+] (/m3)',
-        '[O(2P)+]': '[O_2P+] (/m3)',
-        '[H+]': '[H+] (/m3)',
-        '[He+]': '[He+] (/m3)',
-        '[e-]': '[e-] (/m3)',
-        'eTemperature': 'Te (K)',
-        'iTemperature': 'Ti (K)',
-        'Vi(east)': 'Vie (m/s)',
-        'Vi(north)': 'Vin (m/s)',
-        'Vi(up)': 'Viv (m/s)'}
-
+    Accepts a single string or a list of strings.
+    Always returns a list.
+    """
+    _ensure_loaded()
+    if np.isscalar(varsIn):
+        varsIn = [varsIn]
     varsOut = []
-
     for var in varsIn:
-        if (var in mapVars):
-            varsOut.append(mapVars[var])
+        row = _INDEX.get(var.lower())
+        if row and row['unit']:
+            varsOut.append(f"{row['shortname']} ({row['unit']})")
+        elif row:
+            varsOut.append(row['shortname'])
         else:
             varsOut.append(var)
     return varsOut
 
-#-----------------------------------------------------------------------------
-# remap gitm variables - take the GITM names and match them with 
-# names that are very short and terse - that could be used for 
-# filenames, for example.
-#-----------------------------------------------------------------------------
+
+def get_short_name(name):
+    """Look up the shortname for any known variable name.
+
+    Accepts shortnames, longnames, or model-output names (case-insensitive).
+    Returns the canonical shortname (e.g. 'Tn', 'O+', 'eFlux').
+    Falls back to stripping a parenthesized suffix if the name is unknown.
+    """
+    _ensure_loaded()
+    row = _INDEX.get(name.lower())
+    return row['shortname'] if row else strip_varname(name)
 
 def get_short_names(varsIn):
+    """Look up shortnames for one or more variable names.
 
-    if (np.isscalar(varsIn)):
+    Accepts a single string or a list of strings. Always returns a list.
+    """
+    if np.isscalar(varsIn):
         varsIn = [varsIn]
-    
-    mapVars = {
-        'Rho' : 'rho',
-        'den' : 'rho',
-        '[O(3P)]': 'O',
-        '[O2]': 'O2',
-        '[N2]': 'N2',
-        '[N(4S)]': 'N',
-        '[NO]': 'NO',
-        '[He]': 'He',
-        '[N(2D)]': 'N_2D',
-        '[N(2P)]': 'N_2P',
-        '[H]': 'H',
-        '[CO2]': 'CO2',
-        '[O(1D)]': 'O_1D',
-        'density_O': 'O',
-        'density_O_3P': 'O',
-        'density_O2': 'O2',
-        'density_N2': 'N2',
-        'density_N': 'N',
-        'density_N_4S': 'N',
-        'density_NO': 'NO',
-        'density_He': 'He',
-        'density_N_2D': 'N_2D',
-        'density_N_2P': 'N_2P',
-        'density_H': 'H',
-        'density_CO2': 'CO2',
-        'density_O_1D': 'O_1D',
-        'Temperature': 'Tn',
-        'temperature_neutral': 'Tn',
-        'o_density': 'O',
-        'n_density': 'N',
-        'o2_density': 'O2',
-        'n2_density': 'N2',
-        'he_density': 'He',
-        'h_density': 'H',
-        'neutral_temperature': 'Tn',
-        'Vn(east)': 'Ve',
-        'Vn(north)': 'Vn',
-        'Vn(up)': 'Vv',
-        'velocity_east_neutral': 'Ve',
-        'velocity_north_neutral': 'Vn',
-        'velocity_up_neutral': 'Vv',
-        'Vn(up,O(3P))': 'Vv_O',
-        'Vn(up,O2)': 'Vv_O2',
-        'Vn(up,N2)': 'Vv_N2',
-        'Vn(up,N(4S))': 'Vv_N',
-        'Vn(up,NO)': 'Vv_NO',
-        'Vn(up,He)': 'Vv_He',
-        'Vn(up,CO2)': 'Vv_CO2',
-        '[O_4SP_+]': 'O+',
-        '[NO+]': 'NO+',
-        '[O2+]': 'O2+',
-        '[N2+]': 'N2+',
-        '[N+]': 'N+',
-        '[O(2D)+]': 'O_2D+',
-        '[O(2P)+]': 'O_2P+',
-        '[H+]': 'H+',
-        '[He+]': 'He+',
-        '[e-]': 'e-',
-        'density_NO+': 'NO+',
-        'no_plus_density': 'NO+',
-        'density_O+': 'O+',
-        'o_plus_density': 'O+',
-        'density_O2+': 'O2+',
-        'o2_plus_density': 'O2+',
-        'density_N2+': 'N2+',
-        'n2_plus_density': 'N2+',
-        'density_N+': 'N+',
-        'n_plus_density': 'N+',
-        'density_O+_2D': 'O_2D+',
-        'density_O+_2P': 'O_2P+',
-        'o_plus_2D_density': 'O_2D+',
-        'o_plus_2P_density': 'O_2P+',
-        'density_H+': 'H+',
-        'h_plus_density': 'H+',
-        'density_He+': 'He+',
-        'he_plus_density': 'He+',
-        'density_e-': 'e-',
-        'eTemperature': 'Te',
-        'electron_temperature': 'Te',
-        'temperature_electron': 'Te',
-        'iTemperature': 'Ti',
-        'temperature_ion': 'Ti',
-        'ion_temperature': 'Ti',
-        'velocity_east_ion': 'Vie',
-        'velocity_north_ion': 'Vin',
-        'velocity_up_ion': 'Viv',
-        'Vi(east)': 'Vie',
-        'Vi(north)': 'Vin',
-        'Vi(up)': 'Viv',
-        'VerticalTEC': 'TEC',
-        'Potential': 'pot',
-        'PedersenConductance': 'PedCond',
-        'HallConductance': 'HalCond',
-        'Electron_Average_Energy_Diffuse': 'AveE',
-        'Electron_Energy_Flux_Diffuse': 'eFlux',
-        'Electron_Average_Energy_Wave': 'AveE_W',
-        'Electron_Energy_Flux_Wave': 'eFlux_w',
-        'Electron_Average_Energy_Mono': 'AveE_M',
-        'Electron_Energy_Flux_Mono': 'eFlux_M',
-        'Ion_Average_Energy': 'AveE_I',
-        'Ion_Energy_Flux': 'eFlux_I',
-        'AltIntJouleHeating(W/m2)': 'JouleHeat',
-        'AltIntHeatingTransfer(W/m2)': 'HeatTrans',
-        'AltIntEuvHeating(W/m2)': 'EuvHeat',
-        'AltIntPhotoElectronHeating(W/m2)': 'PhotoElecHeat',
-        'AltIntChamicalHeating(W/m2)': 'ChemHeat',
-        'AltIntRadCooling(W/m2)': 'RadCool',
-        'AltIntCO2Cooling(W/m2)': 'CO2Cool',
-        'AltIntNOCooling(W/m2)': 'NOCool',
-        'AltIntOCooling(W/m2)': 'OCool'}
+    return [get_short_name(v) for v in varsIn]
 
+def get_long_name(name):
+    """Look up a descriptive long name with units for a variable.
 
-    varsOut = []
-    for var in varsIn:
-        if (var in mapVars):
-            varsOut.append(mapVars[var])
-        elif (var.lower() in mapVars):
-            varsOut.append(mapVars[var.lower()])
-        else:
-            varsOut.append(strip_varname(var))
-    return varsOut
-
-#-----------------------------------------------------------------------------
-# remap gitm variables - Take the GITM variable names and expand them so
-# that they could be used for things like publications.
-#-----------------------------------------------------------------------------
+    Returns e.g. 'Neutral Temperature (K)', 'O+ Density (/m3)'.
+    Falls back to the input string if the name is unknown.
+    """
+    _ensure_loaded()
+    row = _INDEX.get(name.lower())
+    if row:
+        if row['unit']:
+            return f"{row['longname']} ({row['unit']})"
+        return row['longname']
+    return name
 
 def get_long_names(varsIn):
+    """Look up long names for one or more variable names.
 
-    mapVars = {
-        'Rho' : 'Mass Density (kg/m3)',
-        'den' : 'Mass Density (kg/m3)',
-        '[O(3P)]': 'Neutral O Density (/m3)',
-        '[O2]': 'Neutral O2 Density (/m3)',
-        '[N2]': 'Neutral N2 Density (/m3)',
-        '[N(4S)]': 'Neutral N Density (/m3)',
-        '[NO]': 'Neutral NO Density (/m3)',
-        '[He]': 'Neutral He Density (/m3)',
-        '[N(2D)]': 'Neutral N(2D) Density(/m3)',
-        '[N(2P)]': 'Neutral N(2P) Density (/m3)',
-        '[H]': 'Neutral H Density (/m3)',
-        '[CO2]': 'Neutral CO2 Density (/m3)',
-        '[O(1D)]': 'Neutral O(1D) Density (/m3)',
-        'o_density': 'Neutral O Density (/m3)',
-        'n_density': 'Neutral N Density (/m3)',
-        'o2_density': 'Neutral O2 Density (/m3)',
-        'n2_density': 'Neutral N2 Density (/m3)',
-        'he_density': 'Neutral He Density (/m3)',
-        'h_density': 'Neutral H Density (/m3)',
-        'neutral_temperature': 'Neutral Temperature (K)',
-        'Temperature': 'Neutral Temperature (K)',
-        'Vn(east)': 'Neutral Eastward Velocity (m/s)',
-        'Vn(north)': 'Neutral Northward Velocity (m/s)',
-        'Vn(up)': 'Neutral Vertical Velocity (m/s)',
-        'Vn(up,O(3P))': 'Vertical Velocity of O (m/s)',
-        'Vn(up,O2)': 'Vertical Velocity of O2 (m/s)',
-        'Vn(up,N2)': 'Vertical Velocity of N2 (m/s)',
-        'Vn(up,N(4S))': 'Vertical Velocity of N (m/s)',
-        'Vn(up,NO)': 'Vertical Velocity of NO (m/s)',
-        'Vn(up,He)': 'Vertical Velocity of He (m/s)',
-        '[O_4SP_+]': 'O+ Density (/m3)',
-        '[NO+]': 'NO+ Density (/m3)',
-        '[O2+]': 'O2+ Density (/m3)',
-        '[N2+]': 'N2+ Density (/m3)',
-        '[N+]': 'N+ Density (/m3)',
-        '[O(2D)+]': 'O(2D+) Density (/m3)',
-        '[O(2P)+]': 'O(2P)+ Density (/m3)',
-        '[H+]': 'H+ Density (/m3)',
-        '[He+]': 'He+ Density (/m3)',
-        '[e-]': 'Electron Density (/m3)',
-        'o_plus_density': 'O+ Density (/m3)',
-        'n_plus_density': 'N+ Density (/m3)',
-        'o2_plus_density': 'O2+ Density (/m3)',
-        'no_plus_density': 'NO+ Density (/m3)',
-        'n2_plus_density': 'N2+ Density (/m3)',
-        'h_plus_density': 'H+ Density (/m3)',
-        'he_plus_density': 'He+ Density (/m3)',
-        'o_plus_2D_density': 'O(2D+) Density (/m3)',
-        'o_plus_2P_density': 'O(2P+) Density (/m3)',
-        'eTemperature': 'Electron Temperature (K)',
-        'iTemperature': 'Ion Temperature (K)',
-        'electron_temperature': 'Electron Temperature (K)',
-        'ion_temperature': 'Ion Temperature (K)',
-        'Vi(east)': 'Vie (m/s)',
-        'Vi(north)': 'Vin (m/s)',
-        'Vi(up)': 'Viv (m/s)'}
+    Accepts a single string or a list of strings. Always returns a list.
+    """
+    if np.isscalar(varsIn):
+        varsIn = [varsIn]
+    return [get_long_name(v) for v in varsIn]
 
-    varsOut = []
+def get_unit(name):
+    """Return the unit string for a variable (e.g. 'K', '/m3', 'mW/m2').
 
-    for var in varsIn:
-        if (var in mapVars):
-            varsOut.append(mapVars[var])
-        else:
-            varsOut.append(var)
-    return varsOut
+    Returns an empty string if the variable is unknown or has no unit.
+    """
+    _ensure_loaded()
+    row = _INDEX.get(name.lower())
+    return row['unit'] if row else ''
+
+def get_pretty_name(name):
+    """Return matplotlib-ready LaTeX name wrapped in $...$.
+
+    Falls back to shortname (without $ wrapping) if no prettyname is defined.
+    """
+    _ensure_loaded()
+    row = _INDEX.get(name.lower())
+    if row and row['prettyname']:
+        return f"${row['prettyname']}$"
+    return get_short_name(name)
+
+def get_label(name):
+    """Return a matplotlib-ready axis label combining prettyname and unit.
+
+    Examples:
+        get_label('Tn')        -> '$T_n$ (K)'
+        get_label('O+')        -> '$[O^+]$ (/m3)'
+        get_label('PedCond')   -> '$\\Sigma_P$ (S)'
+        get_label('UnknownVar') -> 'UnknownVar'
+
+    If a prettyname is defined, uses '$prettyname$ (unit)'.
+    Otherwise falls back to 'longname (unit)' via get_long_name.
+    """
+    _ensure_loaded()
+    row = _INDEX.get(name.lower())
+    if row and row['prettyname']:
+        if row['unit']:
+            return f"${row['prettyname']}$ ({row['unit']})"
+        return f"${row['prettyname']}$"
+    return get_long_name(name)
+
+def list_variables():
+    """Return a list of all known variable shortnames.
+
+    Useful for discovering what variables are available in the CSV.
+    """
+    _ensure_loaded()
+    return [row['shortname'] for row in _ROWS]
 

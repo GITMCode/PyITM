@@ -1,0 +1,253 @@
+This file contains the list of variable mappings which can be read by variables.py
+
+New lines can be added such that the short names are all unique
+That is: long names, units, prettyname, etc. can all be duplicates
+
+Any character is allowed except for commas in any of the data fields.
+Lines beginning in # are not parsed (comments).
+> Some models output commas in variable names, use a semicolon (;) in modelnames and it
+    will be understood as a comma when searching
+If you require commas or a shortname beginning with #, please contact the developers
+  of PyITM
+
+
+Leading/trailing spaces in each column are ignored, internal spaces are retained
+
+
+----
+Key:
+----
+shortname: this is the variable name stored in (post-processed) files. Must be unique!
+longname: a descriptive name for plots, etc.
+units: The units. Parenthesis are added automatically
+prettyname: Optional latex-formatted name for the variable. $'s are added automatically
+    Use LaTeX syntax!
+    ex: if we want average energy written as <E>, this would be "\langle E \rangle"
+modeloutname: not required, but can be included. The name to look for in raw model outputs
+    This can be any length, to interface with new models append to each variables' line
+
+
+Continuing the average energy example, the line for the average energy of the
+diffuse electron precipitation would be written as:
+
+AveE_D, Electron Diffuse Average Energy,keV, \langle E \rangle, avgEDiff,Electron_Average_Energy_Diffuse,diffAvEe, ...
+
+shortname, longname,                   unit, prettyname,       modelnames
+
+----
+
+
+Anything in this file before #START is not parsed
+
+
+shortname, longname, unit, prettyname, modelname(s), modelname(s), modelname(s), ...
+#START
+# ============================================================================
+# Neutral Densities
+# ============================================================================
+rho, Mass Density, kg/m3, \rho, Rho
+O, Neutral O Density, /m3, [O], [O(3P)], o_density, density_O, density_O_3P
+O2, Neutral O2 Density, /m3, [O_2], [O2], o2_density, density_O2
+N2, Neutral N2 Density, /m3, [N_2], [N2], n2_density, density_N2
+N, Neutral N Density, /m3, [N], [N(4S)], n_density, density_N, density_N_4S
+NO, Neutral NO Density, /m3, [NO], [NO], density_NO
+He, Neutral He Density, /m3, [He], [He], he_density, density_He
+N_2D, Neutral N(2D) Density, /m3, [N(^2D)], [N(2D)], density_N_2D, density_N2D
+N_2P, Neutral N(2P) Density, /m3, [N(^2P)], [N(2P)], density_N_2P, density_N2P
+H, Neutral H Density, /m3, [H], [H], h_density, density_H
+CO2, Neutral CO2 Density, /m3, [CO_2], [CO2], density_CO2
+O_1D, Neutral O(1D) Density, /m3, [O(^1D)], [O(1D)], density_O_1D, density_O1D
+# ============================================================================
+# Ion Densities
+# ============================================================================
+O+, O+ Density, /m3, [O^+], [O_4SP_+], o_plus_density, density_O+
+NO+, NO+ Density, /m3, [NO^+], [NO+], no_plus_density, density_NO+
+O2+, O2+ Density, /m3, [O_2^+], [O2+], o2_plus_density, density_O2+
+N2+, N2+ Density, /m3, [N_2^+], [N2+], n2_plus_density, density_N2+
+N+, N+ Density, /m3, [N^+], [N+], n_plus_density, density_N+
+O_2D+, O(2D+) Density, /m3, [O(^2D)^+], [O(2D)+], o_plus_2D_density, density_O+_2D, density_O+2D
+O_2P+, O(2P+) Density, /m3, [O(^2P)^+], [O(2P)+], o_plus_2P_density, density_O+_2P, density_O+2P
+H+, H+ Density, /m3, [H^+], [H+], h_plus_density, density_H+
+He+, He+ Density, /m3, [He^+], [He+], he_plus_density, density_He+
+e-, Electron Density, /m3, [e^-], [e-], density_e-
+# ============================================================================
+# Neutral Temperatures and Velocities
+# ============================================================================
+Tn, Neutral Temperature, K, T_n, Temperature, temperature_neutral, neutral_temperature, Temperature_neutral
+Ve, Neutral Eastward Velocity, m/s, V_e, Vn(east), velocity_east_neutral
+Vn, Neutral Northward Velocity, m/s, V_n, Vn(north), velocity_north_neutral
+Vv, Neutral Vertical Velocity, m/s, V_v, Vn(up), velocity_up_neutral
+Vv_O, Vertical Velocity of O, m/s, V_{v;O}, Vn(up;O(3P)), velocity_up_O
+Vv_O2, Vertical Velocity of O2, m/s, V_{v;O_2}, Vn(up;O2), velocity_up_O2
+Vv_N2, Vertical Velocity of N2, m/s, V_{v;N_2}, Vn(up;N2), velocity_up_N2
+Vv_N, Vertical Velocity of N, m/s, V_{v;N}, Vn(up;N(4S)), velocity_up_N
+Vv_NO, Vertical Velocity of NO, m/s, V_{v;NO}, Vn(up;NO), velocity_up_NO
+Vv_He, Vertical Velocity of He, m/s, V_{v;He}, Vn(up;He), velocity_up_He
+Vv_CO2, Vertical Velocity of CO2, m/s, V_{v;CO_2}, Vn(up;CO2), velocity_up_CO2
+Vv_H, Vertical Velocity of H, m/s, V_{v;H}, velocity_up_H
+Vv_N2D, Vertical Velocity of N(2D), m/s, V_{v;N(2D)}, velocity_up_N2D
+Vv_N2P, Vertical Velocity of N(2P), m/s, V_{v;N(2P)}, velocity_up_N2P
+Vv_O1D, Vertical Velocity of O(1D), m/s, V_{v;O(1D)}, velocity_up_O1D
+Ve_O, O Eastward Velocity, m/s, V_{e;O}, velocity_east_O
+Ve_N, N Eastward Velocity, m/s, V_{e;N}, velocity_east_N
+Ve_O2, O2 Eastward Velocity, m/s, V_{e;O_2}, velocity_east_O2
+Ve_N2, N2 Eastward Velocity, m/s, V_{e;N_2}, velocity_east_N2
+Ve_NO, NO Eastward Velocity, m/s, V_{e;NO}, velocity_east_NO
+Ve_He, He Eastward Velocity, m/s, V_{e;He}, velocity_east_He
+Ve_H, H Eastward Velocity, m/s, V_{e;H}, velocity_east_H
+Ve_CO2, CO2 Eastward Velocity, m/s, V_{e;CO_2}, velocity_east_CO2
+Ve_N2D, N(2D) Eastward Velocity, m/s, V_{e;N(2D)}, velocity_east_N2D
+Ve_N2P, N(2P) Eastward Velocity, m/s, V_{e;N(2P)}, velocity_east_N2P
+Ve_O1D, O(1D) Eastward Velocity, m/s, V_{e;O(1D)}, velocity_east_O1D
+Vn_O, O Northward Velocity, m/s, V_{n;O}, velocity_north_O
+Vn_N, N Northward Velocity, m/s, V_{n;N}, velocity_north_N
+Vn_O2, O2 Northward Velocity, m/s, V_{n;O_2}, velocity_north_O2
+Vn_N2, N2 Northward Velocity, m/s, V_{n;N_2}, velocity_north_N2
+Vn_NO, NO Northward Velocity, m/s, V_{n;NO}, velocity_north_NO
+Vn_He, He Northward Velocity, m/s, V_{n;He}, velocity_north_He
+Vn_H, H Northward Velocity, m/s, V_{n;H}, velocity_north_H
+Vn_CO2, CO2 Northward Velocity, m/s, V_{n;CO_2}, velocity_north_CO2
+Vn_N2D, N(2D) Northward Velocity, m/s, V_{n;N(2D)}, velocity_north_N2D
+Vn_N2P, N(2P) Northward Velocity, m/s, V_{n;N(2P)}, velocity_north_N2P
+Vn_O1D, O(1D) Northward Velocity, m/s, V_{n;O(1D)}, velocity_north_O1D
+# ============================================================================
+# Ion/Electron Temperatures and Velocities
+# ============================================================================
+Te, Electron Temperature, K, T_e, eTemperature, electron_temperature, temperature_electron, Temperature_e-
+Ti, Ion Temperature, K, T_i, iTemperature, temperature_ion, ion_temperature, Temperature_ion
+Ti_O+, O+ Temperature, K, T_{O^+}, Temperature_O+
+Ti_O2+, O2+ Temperature, K, T_{O_2^+}, Temperature_O2+
+Ti_N2+, N2+ Temperature, K, T_{N_2^+}, Temperature_N2+
+Ti_NO+, NO+ Temperature, K, T_{NO^+}, Temperature_NO+
+Ti_N+, N+ Temperature, K, T_{N^+}, Temperature_N+
+Ti_He+, He+ Temperature, K, T_{He^+}, Temperature_He+
+Ti_O2D+, O(2D)+ Temperature, K, T_{O(2D)^+}, Temperature_O+2D
+Ti_O2P+, O(2P)+ Temperature, K, T_{O(2P)^+}, Temperature_O+2P
+Vie, Ion Eastward Velocity, m/s, V_{e;i}, Vi(east), velocity_east_ion
+Vin, Ion Northward Velocity, m/s, V_{n;i}, Vi(north), velocity_north_ion
+Viv, Ion Vertical Velocity, m/s, V_{v;i}, Vi(up), velocity_up_ion
+# ============================================================================
+# Integrated Quantities
+# ============================================================================
+TEC, Vertical TEC, TECUnits, TEC, VerticalTEC
+pot, Electric Potential, V, \Phi, Potential
+PedCond, Pedersen Conductance, S, \sigma_P, PedersenConductance
+HalCond, Hall Conductance, S, \sigma_H, HallConductance
+# ============================================================================
+# Auroral / Energy Deposition
+# ============================================================================
+AveE, Electron Diffuse Average Energy, keV, \langle E \rangle, Electron_Average_Energy_Diffuse
+eFlux, Electron Diffuse Energy Flux, mW/m2, \Phi_E, Electron_Energy_Flux_Diffuse
+AveE_W, Electron Wave Average Energy, keV, \langle E \rangle_W, Electron_Average_Energy_Wave
+eFlux_w, Electron Wave Energy Flux, mW/m2, \Phi_{E;W}, Electron_Energy_Flux_Wave
+AveE_M, Electron Mono Average Energy, keV, \langle E \rangle_M, Electron_Average_Energy_Mono
+eFlux_M, Electron Mono Energy Flux, mW/m2, \Phi_{E;M}, Electron_Energy_Flux_Mono
+AveE_I, Ion Average Energy, keV, \langle E \rangle_i, Ion_Average_Energy
+eFlux_I, Ion Energy Flux, mW/m2, \Phi_{E;i}, Ion_Energy_Flux
+# ============================================================================
+# Alt-Integrated Heating / Cooling
+# ============================================================================
+JouleHeat, Alt-Integrated Joule Heating, W/m2,, AltIntJouleHeating(W/m2)
+HeatTrans, Alt-Integrated Heating Transfer, W/m2,, AltIntHeatingTransfer(W/m2)
+EuvHeat, Alt-Integrated EUV Heating, W/m2,, AltIntEuvHeating(W/m2)
+PhotoElecHeat, Alt-Integrated Photoelectron Heating, W/m2,, AltIntPhotoElectronHeating(W/m2)
+ChemHeat, Alt-Integrated Chemical Heating, W/m2,, AltIntChamicalHeating(W/m2)
+RadCool, Alt-Integrated Radiative Cooling, W/m2,, AltIntRadCooling(W/m2)
+CO2Cool, Alt-Integrated CO2 Cooling, W/m2,, AltIntCO2Cooling(W/m2)
+NOCool, Alt-Integrated NO Cooling, W/m2,, AltIntNOCooling(W/m2)
+OCool, Alt-Integrated O Cooling, W/m2,, AltIntOCooling(W/m2)
+# ============================================================================
+# Coordinates / Geometry
+# ============================================================================
+Lon, Longitude, deg,, Longitude, lon
+Lat, Latitude, deg,, Latitude, lat
+Alt, Altitude, km,, Altitude, z
+LT, Local Time, hrs,, LocalTime, lt
+SZA, Solar Zenith Angle, deg,, SolarZenithAngle
+MLat, Magnetic Latitude, deg,, MagneticLatitude, mlat
+MLon, Magnetic Longitude, deg,, MagneticLongitude, mlon
+MLT, Magnetic Local Time, hrs,, MLT, mlt
+GeoLat, Geographic Latitude, deg,, GeoLat, glat
+GeoLon, Geographic Longitude, deg,, GeoLon, glon
+invLat, Magnetic Invariant Latitude, deg,, invLat
+radius, Radius, m,, radius
+delta_i, Grid Spacing di, m,, dim
+delta_j, Grid Spacing dj, m,, djm
+delta_k, Grid Spacing dk, m,, dkm
+# ============================================================================
+# Electric and Magnetic Fields
+# ============================================================================
+BF_e, Magnetic Field Eastward, nT, B_{e}, B.F.East, Beast
+BF_n, Magnetic Field Northward, nT, B_{n}, B.F.North, Bnorth
+BF_v, Magnetic Field Vertical, nT, B_{v}, B.F.Vertical, Bvertical
+BF_mag, Magnetic Field Magnitude, nT, |B|, B.F.Magnitude
+GF_e, Gravity Eastward, m/s2, G_e, Geast
+GF_n, Gravity Northward, m/s2, G_n, Gnorth
+GF_v, Gravity Vertical, m/s2, G_v, Gvertical
+GF_mag, Gravity Magnitude, m/s2, |G|, Gmag
+GF_pot, Gravity Potential, m2/s2, \Phi_G, Gpotential
+EF_e, Electric Field Eastward, mV/m, E_{e}, E.F.East
+EF_n, Electric Field Northward, mV/m, E_{n}, E.F.North
+EF_v, Electric Field Vertical, mV/m, E_{v}, E.F.Vertical
+EF_mag, Electric Field Magnitude, mV/m, |E|, E.F.Magnitude
+# ============================================================================
+# Electrodynamics
+# ============================================================================
+Ed1, Electric Drift 1,,, Ed1
+Ed2, Electric Drift 2,,, Ed2
+Je1, Current Density 1, A/m2, J_{e1}, Je1
+Je2, Current Density 2, A/m2, J_{e2}, Je2
+Ed1new, Electric Drift 1 (new),,, Ed1new
+Ed2new, Electric Drift 2 (new),,, Ed2new
+DivJuAlt, Divergence of Current (altitude), A/m2,, DivJuAlt
+DivJuFL, Divergence of Current (field line), A/m2,, DivJuFL
+nu_in, Ion-Neutral Collision Frequency, Hz, \nu_{in}, INCollisionFreq
+PressGrad_e, Ion Pressure Gradient Eastward, Pa/m, \nabla P_{e}, PressGrad(east)
+PressGrad_n, Ion Pressure Gradient Northward, Pa/m, \nabla P_{n}, PressGrad(north)
+PressGrad_v, Ion Pressure Gradient Vertical, Pa/m, \nabla P_{v}, PressGrad(up)
+PedFLCond, Pedersen FL Conductance, S, \sigma_{P;FL}, PedersenFLConductance
+HalFLCond, Hall FL Conductance, S, \sigma_{H;FL}, HallFLConductance
+FLLen, Field Line Length, km,, FLLength, FieldLineLength
+DynPot, Dynamo Potential, V, \Phi_{dyn}, DynamoPotential
+potTotal, Total Potential, V, \Phi_{tot}, TotalPotential
+potMag, Magnetospheric Potential, V, \Phi_{mag}, MagnetosphericPotential
+# ============================================================================
+# Conductivity Tensor
+# ============================================================================
+SigmaPP, Sigma PP, ,, SigmaPP
+SigmaLL, Sigma LL, , , SigmaLL
+SigmaH_mel, Sigma H (MEL), S, , SigmaH
+SigmaC, Sigma C, , , SigmaC
+SigmaPL, Sigma PL, ,, SigmaPL
+SigmaLP, Sigma LP, , , SigmaLP
+KD_mphi, Magnetic Diffusion Coefficient (phi),, K^D_{m\phi}, K^D_{m\phi}
+KD_mlamda, Magnetic Diffusion Coefficient (lambda),, K^D_{m\lambda}, K^D_{m\lamda}
+Kphi, K phi,,, Kphi
+Klamda, K lambda,,, Klamda
+# ============================================================================
+# Solver Coefficients
+# ============================================================================
+SolverA, Solver Coefficient A,,, SolverA
+SolverB, Solver Coefficient B,,, SolverB
+SolverC, Solver Coefficient C,,, SolverC
+SolverD, Solver Coefficient D,,, SolverD
+SolverE, Solver Coefficient E,,, SolverE
+SolverS, Solver Coefficient S,,, SolverS
+# ============================================================================
+# Heating / Cooling
+# ============================================================================
+Q_EUV, EUV Heating Rate, K/s, Q_{EUV}, EUVHeating(K/s), Heating_EUV
+Q_cond, Conduction, K/s, Q_{cond}, Conduction(K/s), Conduction
+Q_molcond, Molecular Conduction, K/s, Q_{mol}, MolecularConduction(K/s)
+Q_eddy, Eddy Conduction, K/s, Q_{eddy}, EddyConduction(K/s)
+Q_eddyadia, Eddy Adiabatic Conduction, K/s, Q_{eddy;ad}, EddyAdiabaticConduction(K/s)
+Q_chem, Chemical Heating Rate, K/s, Q_{chem}, ChemicalHeating(K/s), Heating_Chemistry
+Q_Joule, Joule Heating Rate, K/s, Q_J, JouleHeating(K/s)
+Q_NOcool, NO Cooling Rate, K/s, Q_{NO}, NOCooling(K/s), NO Rad Cooling
+Q_Ocool, O Cooling Rate, K/s, Q_O, OCooling(K/s), O Rad Cooling
+TotAbsEUV, Total Absorbed EUV,,, TotalAbsEUV
+Cp, Specific Heat, J/(kg*K), c_p, Cp
+SigmaPed, Pedersen Conductivity, , , SigmaPed
+IonRate_O, Ionization Rate O(3P), /m3/s,, IonizationRateO_3P
+IonRate_O2, Ionization Rate O2, /m3/s,, IonizationRateO2
+IonRate_N2, Ionization Rate N2, /m3/s,, IonizationRateN2
