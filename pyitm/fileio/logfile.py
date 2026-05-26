@@ -144,7 +144,7 @@ def read_logfile(logfilename=None, datadir=None, verbose=False):
     logdata = {}
 
     saving = False
-    readVars = True
+    readVars = False
     with open(logfilename, 'r') as f:
         for n, line in enumerate(f.readlines()):
             if (readVars):
