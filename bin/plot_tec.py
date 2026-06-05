@@ -11,7 +11,7 @@ import argparse
 import sys
 sys.path.insert(0,'/home/ridley/Software/PyITM/')
 
-from pyitm.fileio import gitmio
+from pyitm.fileio import util
 from pyitm.modeldata import utils
 from pyitm.plotting import plotutils
 from pyitm.plotting import plotters
@@ -58,22 +58,25 @@ if __name__ == '__main__':
     # Get the input arguments
     args = get_args()
     filelist = args.filelist
-    varToPlot = [34]
+    varToPlot = ['e-']
 
-    allData3D = gitmio.read_gitm_all_files(filelist, varToPlot)
+    allData3D = util.read_all_files(filelist, varToPlot)
 
-    lons1d = allData3D['lons'][:, 0, 0]
+    lons2d = allData3D['lons'][:, :, 0]
     lats1d = allData3D['lats'][0, :, 0]
-    lonsEdge = utils.move_centers_to_edges(lons1d)
-    latsEdge = utils.move_centers_to_edges(lats1d)
+    lats2d = allData3D['lats'][:, :, 0]
+    #lonsEdge = utils.move_centers_to_edges(lons1d)
+    #latsEdge = utils.move_centers_to_edges(lats1d)
 
     allSlicesRaw = utils.calc_tec(allData3D)
     sVarName = 'TEC'
     sFilePre = 'varTEC_'
     allTimes = allData3D['times']
-    dt = (allTimes[1] - allTimes[0]).total_seconds()
+    if (len(allTimes) > 1):
+        dt = (allTimes[1] - allTimes[0]).total_seconds()
 
     sTitleAdd = ' TEC '
+    dtFilter = -1
     if (args.low > 0):
         sVarName = 'TEC (low pass)'
         sFilePre = 'varTECl_'
@@ -85,26 +88,30 @@ if __name__ == '__main__':
         dtFilter = dt * args.high/60.0
         sTitleAdd = sTitleAdd + '(%.0fm High Pass Filtered)' % dtFilter
 
-    allSlices = utils.filter_slices(allSlicesRaw, \
-                                    iLowPass = args.low, iHighPass = args.high)        
-
+    if (dtFilter > 0):
+        allSlices = utils.filter_slices(allSlicesRaw, \
+                                        iLowPass = args.low, \
+                                        iHighPass = args.high)
+    else:
+        allSlices = allSlicesRaw
+        
     # get min and max values, plus color table:
     dataMinMax = plotutils.get_min_max_data(allSlices, lats1d, \
-                                            yMin = args.latmin, yMax = args.latmax, \
+                                            yMin = args.latmin, \
+                                            yMax = args.latmax, \
                                             color = 'red', \
-                                            minVal = args.mini, maxVal = args.maxi)
+                                            minVal = args.mini, \
+                                            maxVal = args.maxi)
 
-    plotters.plot_series_of_slices(allSlices,
-                                   allTimes,
-                                   lonsEdge,
-                                   latsEdge,
-                                   dataMinMax,
-                                   xLabel = 'Longitude (deg)',
-                                   yLabel = 'Latitude (deg)',
-                                   varName = sVarName,
-                                   titleAddOn = sTitleAdd,
-                                   filenamePrefix = sFilePre,
-                                   xLimits = [args.lonmin, args.lonmax],
-                                   yLimits = [args.latmin, args.latmax])                   
-
-    
+    plotters.plot_slices_wpolar(allSlices,
+                                allTimes,
+                                lons2d,
+                                lats2d,
+                                dataMinMax,
+                                xLabel = 'Longitude (deg)',
+                                yLabel = 'Latitude (deg)',
+                                varName = sVarName,
+                                titleAddOn = sTitleAdd,
+                                filenamePrefix = sFilePre,
+                                xLimits = [args.lonmin, args.lonmax],
+                                yLimits = [args.latmin, args.latmax])
