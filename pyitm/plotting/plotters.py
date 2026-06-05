@@ -10,6 +10,7 @@ import numpy as np
 from pyitm.modeldata import utils
 from pyitm.general import time_conversion
 from pyitm.plotting import polar
+from pyitm.modeldata import shoreline
 
 # ----------------------------------------------------------------------------
 # Plot a series of slices
@@ -102,6 +103,7 @@ def plot_slices_wpolar(allSlices,
                        filenamePrefix = '',
                        xLimits = [0, 0],
                        yLimits = [0, 0],
+                       plotShore = True,
                        dpi = 120):
 
     for iTime, uTime in enumerate(allTimes):
@@ -130,6 +132,10 @@ def plot_slices_wpolar(allSlices,
         ax.set_xlabel(xLabel)
         ax.set_ylabel(yLabel)
 
+        if (plotShore):
+            lonShore, latShore = shoreline.shoreline()
+            ax.plot(lonShore, latShore, color = 'k', linewidth = 0.25)        
+
         whichPole = 'North'
         cbar_label = ''
         lats1d = lats2d[0,:]
@@ -142,7 +148,9 @@ def plot_slices_wpolar(allSlices,
                                 dataMinMax['mini'],
                                 dataMinMax['maxi'],
                                 dataMinMax['cmap'],
-                                title = '', cbar_label = '')
+                                title = '',
+                                cbar_label = '',
+                                plotShore = plotShore)
 
         whichPole = 'South'
         cbar_label = ''
@@ -156,7 +164,9 @@ def plot_slices_wpolar(allSlices,
                                 dataMinMax['mini'],
                                 dataMinMax['maxi'],
                                 dataMinMax['cmap'],
-                                title = '', cbar_label = '')
+                                title = '',
+                                cbar_label = '',
+                                plotShore = plotShore)
         
         cbar = fig.colorbar(con, ax = ax, shrink = 0.75, pad = 0.02)
         cbar.set_label(varName, rotation=90)
@@ -200,6 +210,7 @@ def plot_slices_polar_only(allSlices,
                            filenamePrefix = '',
                            xLimits = [0, 0],
                            yLimits = [0, 0],
+                           plotShore = True,
                            dpi = 120):
 
     for iTime, uTime in enumerate(allTimes):
@@ -225,7 +236,9 @@ def plot_slices_polar_only(allSlices,
                                     dataMinMax['mini'],
                                     dataMinMax['maxi'],
                                     dataMinMax['cmap'],
-                                    title = title, cbar_label = varName)
+                                    title = title,
+                                    cbar_label = varName,
+                                    plotShore = plotShore)
             outFile = filenamePrefix + sTimeOut + 'n.png'
             print(" ==> Writing file : ", outFile)
             fig.savefig(outFile, dpi = dpi)
@@ -248,7 +261,9 @@ def plot_slices_polar_only(allSlices,
                                     dataMinMax['mini'],
                                     dataMinMax['maxi'],
                                     dataMinMax['cmap'],
-                                    title = title, cbar_label = varName)
+                                    title = title,
+                                    cbar_label = varName,
+                                    plotShore = plotShore)
         
             outFile = filenamePrefix + sTimeOut + 's.png'
             print(" ==> Writing file : ", outFile)
@@ -289,6 +304,7 @@ def plot_series_of_slices_wblocks(allSlices,
                                   yLimits = [0, 0],
                                   doScatter = False,
                                   forcePolar = False,
+                                  plotShore = True,
                                   dpi = 120):
 
     nBlocks, nX, nY = np.shape(lonPos3d)
@@ -326,7 +342,6 @@ def plot_series_of_slices_wblocks(allSlices,
                 doScatter = True
             if (not isUniform):
                 doScatter = True
-
             if (not doScatter):
                 con = ax.pcolormesh(lon2dedges, lat2dedges, values2d, \
                                     cmap = dataMinMax['cmap'], \
@@ -336,9 +351,11 @@ def plot_series_of_slices_wblocks(allSlices,
                 con = ax.scatter(lon2d, lat2d, c = values2d, \
                                  cmap = dataMinMax['cmap'], \
                                  vmin = dataMinMax['mini'], \
-                                 vmax = dataMinMax['maxi'])
-
+                                 vmax = dataMinMax['maxi'], s=5)
+                
+                isPole = False
                 if ((np.mean(lat2d) > 45.0) and (not isUniform)):
+                    isPole = True 
                     whichPole = 'North'
                     cbar_label = ''
                     polar.plot_polar_region(fig, ax2, lon2d, lat2d, values2d,
@@ -346,8 +363,11 @@ def plot_series_of_slices_wblocks(allSlices,
                                             dataMinMax['mini'],
                                             dataMinMax['maxi'],
                                             dataMinMax['cmap'],
-                                            title = '', cbar_label = '')
+                                            title = '',
+                                            cbar_label = '',
+                                            plotShore = plotShore)
                 if ((np.mean(lat2d) < -45.0) and (not isUniform)):
+                    isPole = True 
                     whichPole = 'South'
                     cbar_label = ''
                     polar.plot_polar_region(fig, ax3, lon2d, lat2d, values2d,
@@ -355,8 +375,17 @@ def plot_series_of_slices_wblocks(allSlices,
                                             dataMinMax['mini'],
                                             dataMinMax['maxi'],
                                             dataMinMax['cmap'],
-                                            title = '', cbar_label = '')
-            
+                                            title = '',
+                                            cbar_label = '',
+                                            plotShore = plotShore)
+                if (not isPole):
+                    nX = len(lon2d[:,0])
+                    nY = len(lon2d[0,:])
+                    for iX in range(0, nX, 2):
+                        ax.plot(lon2d[iX, :], lat2d[iX, :], color='k', linewidth=0.25)
+                    for iY in range(0, nY, 2):
+                        ax.plot(lon2d[:, iY], lat2d[:, iY], color='k', linewidth=0.25)
+                    
         if (xLimits[1] > xLimits[0]):
             ax.set_xlim(xLimits)
         if (yLimits[1] > yLimits[0]):
@@ -365,7 +394,10 @@ def plot_series_of_slices_wblocks(allSlices,
         ax.set_title(title)
         ax.set_xlabel(xLabel)
         ax.set_ylabel(yLabel)
-
+        if (plotShore):
+            lonShore, latShore = shoreline.shoreline()
+            ax.plot(lonShore, latShore, color = 'k', linewidth = 0.25)        
+        
         cbar = fig.colorbar(con, ax = ax, shrink = 0.75, pad = 0.02)
         cbar.set_label(varName, rotation=90)
 

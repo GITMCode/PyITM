@@ -9,6 +9,7 @@ import numpy as np
 
 from pyitm.modeldata import utils
 from pyitm.general import time_conversion
+from pyitm.modeldata import shoreline
 
 
 # ----------------------------------------------------------------------------
@@ -18,7 +19,9 @@ from pyitm.general import time_conversion
 def plot_polar_region(fig, axplot, lon_pos2d, lat_pos2d, values2d,
                       utime, whichPole,
                       miniPole, maxiPole, cmap,
-                      title = '', cbar_label = ''):
+                      title = '', cbar_label = '',
+                      plotShore = True,
+                      plotGrid = False):
 
     maxR = 50.0
     
@@ -57,15 +60,32 @@ def plot_polar_region(fig, axplot, lon_pos2d, lat_pos2d, values2d,
                              cmap = cmap)
     axplot.set_aspect(1.0)
 
+    if (plotShore):
+        lonShore, latShore = shoreline.shoreline()
+        r = 90.0 - fac * latShore
+        t = np.radians(lonShore + shift - 90.0)
+        x = r * np.cos(t)
+        y = r * np.sin(t)
+        axplot.plot(x, y, color = 'k', linewidth = 0.25)
+        
+
     def rt_to_xy(r, t):
         return r * np.cos(t), r * np.sin(t)
     
-    t = np.radians(np.arange(0, 361, 1))
-    for r in np.arange(10, maxR + 10, 10):
-        x, y = rt_to_xy(r, t)
-        axplot.plot(x, y, linestyle = ':', color = 'k', linewidth = 0.5)
-        x, y = rt_to_xy( r, 3 * np.pi/4)
-        axplot.text(x, y, '%d' % int(90.0 - r), fontsize = 10)
+    if (plotGrid):
+        nX = len(x2de[:,0])
+        nY = len(x2de[0,:])
+        for iX in range(0, nX, 2):
+            axplot.plot(x2de[iX, :], y2de[iX, :], color='k', linewidth=0.25)
+        for iY in range(0, nY, 2):
+            axplot.plot(x2de[:, iY], y2de[:, iY], color='k', linewidth=0.25)
+    else:
+        t = np.radians(np.arange(0, 361, 1))
+        for r in np.arange(10, maxR + 10, 10):
+            x, y = rt_to_xy(r, t)
+            axplot.plot(x, y, linestyle = ':', color = 'k', linewidth = 0.5)
+            x, y = rt_to_xy( r, 3 * np.pi/4)
+            axplot.text(x, y, '%d' % int(90.0 - r), fontsize = 10)
 
     axplot.plot([-maxR, maxR], [0.0, 0.0], \
                 linestyle = ':', color = 'k', linewidth = 0.5)
