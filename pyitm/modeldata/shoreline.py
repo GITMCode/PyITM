@@ -1,3 +1,6 @@
+# This code is from Darren DeZeeuw at CCMC.
+# UM folks modified it a bit, but did not write it.
+
 def shoreline():
     """
     Function returns a position array defining land/water boundaries on Earth
