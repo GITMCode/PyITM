@@ -191,7 +191,8 @@ def plot_lon_cut_wblocks(args, allData):
     else:
         if (args.lon >= 0):
             lonGoal = args.lon
-            lons1d = allData['lons'][:, 0, 0]
+            # this is wrong.
+            lons1d = allData['lons'][0, :, 0, 0]
             diff = np.abs(lons1d - lonGoal)
             iLon = np.argmin(diff)
             realLon = lons1d[iLon]
@@ -220,7 +221,9 @@ def plot_lon_cut_wblocks(args, allData):
     allTimes = allData['times']
 
     # get min and max values, plus color table:
-    dataMinMax = plotutils.get_min_max_data(allSlices, None, \
+    print(np.shape(allSlices))
+    withoutGhostCells = allSlices[:,:,2:-2,2:-2]
+    dataMinMax = plotutils.get_min_max_data(withoutGhostCells, None, \
                     color = 'red', \
                     minVal = args.mini, maxVal = args.maxi)
 
@@ -238,11 +241,11 @@ def plot_lon_cut_wblocks(args, allData):
             title = title + '; Zonal Average'
 
         for iBlock in range(nBlocks):
-            alts2d = allData['alts'][iBlock, iLon, :, :]
-            lats2d = allData['lats'][iBlock, iLon, :, :]
+            alts2d = allData['alts'][iBlock, iLon, 2:-2, 2:-2]
+            lats2d = allData['lats'][iBlock, iLon, 2:-2, 2:-2]
             #altsEdge = utils.move_centers_to_edges(alts1d)
             #latsEdge = utils.move_centers_to_edges(lats1d)
-            value2d = allSlices[iTime, iBlock, :, :]
+            value2d = allSlices[iTime, iBlock, 2:-2, 2:-2]
             con = ax.scatter(lats2d, alts2d, c = value2d, \
                              cmap = dataMinMax['cmap'], \
                              vmin = dataMinMax['mini'], \

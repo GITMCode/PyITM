@@ -344,7 +344,7 @@ def data_slice(allData3D, iLon = -1, iLat = -1, iAlt = -1):
                 else:
                     for iTime in range(nTimes):
                         slices[iTime, :, :, :] = \
-                            slice_alt_with_array_block(allData3D['data'][iTime, :, :, :], iAlt)
+                            slice_alt_with_array_block(allData3D['data'][iTime, :, :, :, :], iAlt)
 
         elif (iLat > -1):
             slices = np.zeros((nTimes, nLons, nAlts))

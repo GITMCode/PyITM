@@ -59,6 +59,10 @@ def get_args():
                         action='store_true', default = False, \
                         help = 'list variables in file')
     
+    parser.add_argument('-tec',  \
+                        action='store_true', default = False, \
+                        help = 'plot TEC instead of e-')
+    
     # Get the files to plot:
     parser.add_argument('filelist', nargs='+', \
                         help = 'list files to use for generating plots')

@@ -19,6 +19,9 @@ def check_whether_ipe(filename):
     with Dataset(filename, 'r') as ncfile:
         # Process header information: nlons, nlats, nalts, nblocks
         if (('x01' in ncfile.dimensions) and \
+            ('x02' in ncfile.dimensions)):
+            state = True
+        if (('x01' in ncfile.dimensions) and \
             ('x02' in ncfile.dimensions) and \
             ('x03' in ncfile.dimensions)):
             state = True
@@ -141,11 +144,10 @@ def read_ipe_grid_header(filename, verbose = False):
     data['shortname'] = variables.get_short_names(data['vars'])
     data['times'] = datetime(1965,1,1,0,0,0)
 
-    print(data['vars'])
     return data
 
-#--------------------------------------------------------------------------------------
-#--------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 
 def read_ipe_one_header(filename):
     """Read all keys and such from netcdf file
@@ -201,7 +203,10 @@ def read_ipe_one_header(filename):
         if ('x01' in ncfile.dimensions):
             data['nlons'] = len(ncfile.dimensions['x01'])
             data['nlats'] = len(ncfile.dimensions['x02'])
-            data['nalts'] = len(ncfile.dimensions['x03'])
+            if ('x03' in ncfile.dimensions):
+                data['nalts'] = len(ncfile.dimensions['x03'])
+            else:
+                data['nalts'] = 1
         elif ('phony_dim_0' in ncfile.dimensions):
             data['nlons'] = len(ncfile.dimensions['phony_dim_0'])
             data['nlats'] = len(ncfile.dimensions['phony_dim_1'])
@@ -238,22 +243,31 @@ def read_ipe_one_header(filename):
     
     return data
 
-
-#--------------------------------------------------------------------------------------
-#--------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 
 def reshape_ipe_array(varIn, ipeGridShape, verbose = False):
 
-    iNt_ = ipeGridShape['iNorthTop']
-    iSt_ = ipeGridShape['iSouthTop']-1
-    iM_ = ipeGridShape['iMax']
-
+    dims = np.shape(varIn)
     nLons = ipeGridShape['nLons']
-    nLats = ipeGridShape['nLats'] * 2
-    nAlts = ipeGridShape['nAlts']
+    isAlt2d = False
+    
+    if ((len(dims) == 3) or (nLons == 0)):
+        iNt_ = ipeGridShape['iNorthTop']
+        iSt_ = ipeGridShape['iSouthTop']-1
+        iM_ = ipeGridShape['iMax']
 
-    if (np.max(iNt_) < nAlts):
-        nAlts = np.max(iNt_)
+        nLats = ipeGridShape['nLats'] * 2
+        nAlts = ipeGridShape['nAlts']
+
+        if (np.max(iNt_) < nAlts):
+            nAlts = np.max(iNt_)
+
+    else:
+        isAlt2d = True
+        nLons = dims[0]
+        nLats = dims[1] * 2
+        nAlts = 1
 
     if (nLons > 0):
         varOut = np.empty((nLons, nLats, nAlts))
@@ -262,6 +276,11 @@ def reshape_ipe_array(varIn, ipeGridShape, verbose = False):
 
     varOut.fill(np.nan)
 
+    if (isAlt2d):
+        varOut[:,0:int(nLats/2),0] = varIn
+        varOut[:,int(nLats/2):nLats,0] = np.flip(varIn, axis=1)
+        return varOut
+    
     for i_ in range(ipeGridShape['nLats']):
         if (nLons > 0):
             # grab south, put it in first, but reverse it, since it is high alt first:
@@ -300,8 +319,8 @@ def reshape_ipe_array(varIn, ipeGridShape, verbose = False):
 
     return varOut
 
-#--------------------------------------------------------------------------------------
-#--------------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
+#------------------------------------------------------------------------------
 
 def read_ipe_grid_file(filename, verbose = False):
 
@@ -336,7 +355,7 @@ def read_ipe_grid_file(filename, verbose = False):
         ipeGridShape['nAlts'] = nAlts
 
         alts2d = reshape_ipe_array(alts2draw, ipeGridShape, verbose = verbose)
-        lats2d = reshape_ipe_array(lats2draw, ipeGridShape)
+        lats2d = reshape_ipe_array(lats2draw, ipeGridShape, verbose = verbose)
         ipeGridShape['nLons'] = nLons
         geolons3d = reshape_ipe_array(geolons3draw, ipeGridShape)
         geolats3d = reshape_ipe_array(geolats3draw, ipeGridShape)
@@ -439,7 +458,10 @@ def read_ipe_one_file(filename, \
         if ('x01' in ncfile.dimensions):
             data['nlons'] = len(ncfile.dimensions['x01'])
             data['nlats'] = len(ncfile.dimensions['x02'])
-            data['nalts'] = len(ncfile.dimensions['x03'])
+            if ('x03' in ncfile.dimensions):
+                data['nalts'] = len(ncfile.dimensions['x03'])
+            else:
+                data['nalts'] = 1
         else:
             data['nlons'] = len(ncfile.dimensions['phony_dim_0'])
             data['nlats'] = len(ncfile.dimensions['phony_dim_1'])
@@ -482,11 +504,14 @@ def read_ipe_all_files(filelist, varlist=[-1], verbose=False):
     spatialData = read_ipe_grid_file(gridfile, verbose=False)
     ipeGridShape = spatialData['ipeGridShape']
 
+    # We now have 2d files, which are different, so we need to do
+    # some comparing here:
+    header = read_ipe_one_header(filelist[0])
+
     nTimes = len(filelist)
     if varlist != [-1]:
        nVars = len(varlist)
     else: # varlist=[-1] means we read in all variables
-        header = read_ipe_one_header(filelist[0], verbose=False)
         varlist = header['vars']
         nVars = len(varlist)
 
@@ -499,7 +524,10 @@ def read_ipe_all_files(filelist, varlist=[-1], verbose=False):
     nLats = len(lats[0, :, 0])
     nAlts = len(alts[0, 0, :])
     nBlocks = 0
-        
+
+    if (header['nalts'] == 1):
+        nAlts = 1
+    
     if (nVars == 1):
         allData = np.zeros((nTimes, nLons, nLats, nAlts))
     else:
@@ -510,14 +538,21 @@ def read_ipe_all_files(filelist, varlist=[-1], verbose=False):
         allTimes.append(data["times"])
         for iVar, var in enumerate(varlist):
             if (nVars == 1):
-                allData[iTime, :, :, :] = reshape_ipe_array(data[var][:, :, :], ipeGridShape)
+                allData[iTime, :, :, :] = \
+                    reshape_ipe_array(data[var], ipeGridShape)
             else:
-                allData[iTime, iVar, :, :, :] = reshape_ipe_array(data[var][:, :, :], ipeGridShape)
+                allData[iTime, iVar, :, :, :] = \
+                    reshape_ipe_array(data[var], ipeGridShape)
                 
     vars = []
     for var in varlist:
         vars.append(var)
 
+    if (nAlts == 1):
+        newalts = np.zeros((nLons,nLats,1))
+        newalts[:,:,0] = alts[:,:,0]
+        alts = newalts
+        
     data = {'times': allTimes,
             'data': allData,
             'vars': vars,
