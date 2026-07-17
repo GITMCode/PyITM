@@ -79,17 +79,14 @@ def get_args():
 def plot_sphere(args, allData):
 
     altGoal = args.alt
-    alts1d = allData['alts'][0, 0, :]
-    diff = np.abs(alts1d - altGoal)
-    iAlt = np.argmin(diff)
-    realAlt = alts1d[iAlt]
-
-    lons1d = allData['lons'][:, 0, iAlt]
-    lats1d = allData['lats'][0, :, iAlt]
+    sliceData = utils.data_slice(allData, targetAlt = altGoal)
+    allSlices = sliceData['slices']
+    realAlt = sliceData['realAlt']
+    lons1d = sliceData['lons2d'][:, 0]
+    lats1d = sliceData['lats2d'][0, :]
     lonsEdge = utils.move_centers_to_edges(lons1d)
     latsEdge = utils.move_centers_to_edges(lats1d)
 
-    allSlices = utils.data_slice(allData, iAlt = iAlt)
     varName = allData['longname'][0]
     sVarNum = allData['shortname'][0] + '_'
     sAltNum = 'alt%04d_' % int(realAlt)
