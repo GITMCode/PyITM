@@ -232,7 +232,7 @@ def plot_lon_cut_wblocks(args, allData):
     for iTime, uTime in enumerate(allTimes):
 
         fig = plt.figure(figsize=(10, 5.5), dpi = dpi)
-        ax = fig.add_axes([0.07, 0.06, 0.97, 0.9])
+        ax = fig.add_axes([0.08, 0.07, 0.99, 0.89])
 
         title = uTime.strftime("%d %b %Y %H:%M:%S UT")
         if (iLon > -1):
@@ -249,14 +249,41 @@ def plot_lon_cut_wblocks(args, allData):
             con = ax.scatter(lats2d, alts2d, c = value2d, \
                              cmap = dataMinMax['cmap'], \
                              vmin = dataMinMax['mini'], \
-                             vmax = dataMinMax['maxi'])
+                             vmax = dataMinMax['maxi'], s=1)
+            nLats = len(lats2d[:,0])
+            nAlts = len(lats2d[0,:])
+            # Draw edges:
+            ax.plot(lats2d[0,:], alts2d[0, :], color='b', linewidth=0.75)
+            ax.plot(lats2d[nLats-1,:], alts2d[nLats-1, :], color='b', linewidth=0.75)
+            ax.plot(lats2d[:,0], alts2d[:, 0], color='b', linewidth=0.75)
+            ax.plot(lats2d[:,nAlts-1], alts2d[:, nAlts-1], color='b', linewidth=0.75)
+            mL = np.mean(lats2d)
+            mA = np.mean(alts2d)
+            ax.text(mL, 500, 'Block %d' % (iBlock+1), horizontalalignment='center')
+
+            if (np.mean(lats2d) > 0):
+                for iLat in range(0, nLats, 2):
+                    ax.plot(lats2d[iLat,:], alts2d[iLat, :], color='k', linewidth=0.25)
+                iLat = nLats-1
+                ax.plot(lats2d[iLat,:], alts2d[iLat, :], color='k', linewidth=0.25)
+            else:
+                for iLat in range(nLats-1, 0, -2):
+                    ax.plot(lats2d[iLat,:], alts2d[iLat, :], color='k', linewidth=0.25)
+                iLat = 0
+                ax.plot(lats2d[iLat,:], alts2d[iLat, :], color='k', linewidth=0.25)
+            for iAlt in range(0, nAlts, 8):
+                ax.plot(lats2d[:,iAlt], alts2d[:,iAlt], color='k', linewidth=0.25)
         ax.set_ylim(args.altmin, args.altmax)
         ax.set_xlim(args.latmin, args.latmax)
         #ax.set_aspect(1.0)
         ax.set_title(title)
+        ax.axhline(100.0, linewidth=2.0, color = 'k')
+        ax.text(0.0, -500, 'Non-physical Cells', horizontalalignment='center')
 
         cbar = fig.colorbar(con, ax = ax, shrink = 0.75, pad = 0.02)
         cbar.set_label(varName, rotation=90)
+        ax.set_ylabel('Altitude (km)')
+        ax.set_xlabel('Latitude (deg)')
 
         sTimeOut = uTime.strftime('%y%m%d_%H%M%S')
         outFile = sVarNum + sLonNum + sTimeOut + '.png'
