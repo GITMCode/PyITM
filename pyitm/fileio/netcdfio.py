@@ -80,6 +80,76 @@ def read_nc_times(ncfile, verbose=False):
     return tc.epoch_to_datetime(time_var[:] * scale, t0=t0)
 
 
+def read_netcdf_inventory(filelist, verbose = False):
+    """Summarize netcdf files without reading any data.
+
+    Returns a dict with:
+        filenames - the (normalized) filelist
+        times - global sorted list of datetimes across all files
+        ifile, ilocal - for each global time, which file and which time
+            index within that file it comes from
+        ntimes - len(times)
+        varinfo - per-variable dict: dims, shape, dtype, units, longname,
+            hastime, nbytes (bytes on disk for one time)
+        groups - data variables grouped by their dims minus time;
+            variables named after a dimension are coordinates and excluded
+    """
+
+    filelist = util.any_to_filelist(filelist)
+
+    varinfo = {}
+    groups = {}
+    entries = []
+    for iFile, filename in enumerate(filelist):
+        with Dataset(filename, 'r') as ncfile:
+            if 'time' not in ncfile.variables:
+                raise ValueError(f"no time variable in {filename}")
+            for iLocal, t in enumerate(read_nc_times(ncfile)):
+                entries.append((t, iFile, iLocal))
+            if iFile > 0:
+                continue
+            for name, var in ncfile.variables.items():
+                dims = var.dimensions
+                spatial = tuple(d for d in dims if d != 'time')
+                nPoints = int(np.prod([len(ncfile.dimensions[d])
+                                       for d in spatial], dtype = np.int64))
+                varinfo[name] = {'dims': dims,
+                                 'shape': var.shape,
+                                 'dtype': str(var.dtype),
+                                 'units': getattr(var, 'units', ''),
+                                 'longname': getattr(var, 'long_name', name),
+                                 'hastime': 'time' in dims,
+                                 'nbytes': nPoints * var.dtype.itemsize}
+                if name not in ncfile.dimensions:
+                    groups.setdefault(spatial, []).append(name)
+
+    entries.sort(key = lambda e: (e[0], e[1], e[2]))
+    inventory = {'filenames': filelist,
+                 'times': [e[0] for e in entries],
+                 'ifile': np.array([e[1] for e in entries]),
+                 'ilocal': np.array([e[2] for e in entries]),
+                 'ntimes': len(entries),
+                 'varinfo': varinfo,
+                 'groups': groups}
+
+    if verbose:
+        print(f' -> Inventory: {len(filelist)} files, {len(entries)} times, '
+              f'{len(varinfo)} variables')
+        for sig, names in groups.items():
+            print('   -> vars on', sig if sig else '(scalar)', ':', names)
+
+    return inventory
+
+
+def estimate_read_size(inventory, varlist = None, nTimes = None):
+    """Estimated bytes on disk to read varlist over nTimes times."""
+    if varlist is None or varlist == [-1]:
+        varlist = [v for names in inventory['groups'].values() for v in names]
+    if nTimes is None:
+        nTimes = inventory['ntimes']
+    return sum(inventory['varinfo'][v]['nbytes'] for v in varlist) * nTimes
+
+
 def read_netcdf_one_file(filename, file_vars = None, verbose = False):
     """Read all data from an Aether netcdf file.
 
