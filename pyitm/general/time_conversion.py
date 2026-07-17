@@ -7,38 +7,69 @@ import datetime as dt
 import numpy as np
 
 #-----------------------------------------------------------------------------
+# Default (format = None):
 # inString = 'yyyy-mm-dd_hh:mm:ss.ms'
 #             0000000000111111111122
 #             0123456789012345678901
 # everything after the _ (including the _) is optional
+#
+# format = 'ymd_hms':
+# inString = 'yyyymmdd_hhmmss'
+#             0000000000111111111122
+#             0123456789012345678901
 #-----------------------------------------------------------------------------
 
-def convert_string_to_datetime(inString):
-    iYear = int(inString[0:4])
-    if (len(inString) >= 6):
-        iMonth = int(inString[5:7])
-    else:
-        iMonth = 1
-    if (len(inString) >= 9):
-        iDay = int(inString[8:10])
-    else:
-        iDay = 1
-    if (len(inString) >= 12):
-        iHour = int(inString[11:13])
-    else:
-        iHour = 0
-    if (len(inString) >= 15):
-        iMinute = int(inString[14:16])
-    else:
-        iMinute = 0
-    if (len(inString) >= 18):
-        iSecond = int(inString[17:19])
-    else:
-        iSecond = 1
-    if (len(inString) >= 20):
-        ms = int(inString[20:])
-    else:
+def convert_string_to_datetime(inString, format = None):
+    if (format == 'ymd_hms'):
+        iYear = int(inString[0:4])
+        if (len(inString) >= 5):
+            iMonth = int(inString[4:6])
+        else:
+            iMonth = 1
+        if (len(inString) >= 7):
+            iDay = int(inString[6:8])
+        else:
+            iDay = 1
+        if (len(inString) >= 10):
+            iHour = int(inString[9:11])
+        else:
+            iHour = 0
+        if (len(inString) >= 12):
+            iMinute = int(inString[11:13])
+        else:
+            iMinute = 0
+        if (len(inString) >= 14):
+            iSecond = int(inString[13:15])
+        else:
+            iSecond = 0
         ms = 0
+
+    else:
+        iYear = int(inString[0:4])
+        if (len(inString) >= 6):
+            iMonth = int(inString[5:7])
+        else:
+            iMonth = 1
+        if (len(inString) >= 9):
+            iDay = int(inString[8:10])
+        else:
+            iDay = 1
+        if (len(inString) >= 12):
+            iHour = int(inString[11:13])
+        else:
+            iHour = 0
+        if (len(inString) >= 15):
+            iMinute = int(inString[14:16])
+        else:
+            iMinute = 0
+        if (len(inString) >= 18):
+            iSecond = int(inString[17:19])
+        else:
+            iSecond = 0
+        if (len(inString) >= 20):
+            ms = int(inString[20:])
+        else:
+            ms = 0
     outTime = dt.datetime(iYear, iMonth, iDay, iHour, iMinute, iSecond, ms)
     
     return outTime
