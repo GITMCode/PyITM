@@ -36,8 +36,8 @@ def extract_1d(sat_locations, model_data, interpVar=None,
 
     """
 
-    sat_locations['times'] = np.array(sat_locations['times'])
-    model_data['time'] = np.array(model_data['times'])
+    sat_locations['times'] = np.array(sat_locations['times'], dtype='datetime64[ns]')
+    model_data['times'] = np.array(model_data['times'], dtype='datetime64[ns]')
 
     t_min = max(min(sat_locations['times']), min(model_data['times']))
     t_max = min(max(sat_locations['times']), max(model_data['times']))
@@ -55,18 +55,18 @@ def extract_1d(sat_locations, model_data, interpVar=None,
         print(f" --> timesliceSat: {timesliceSat}, timesliceModel: {timesliceModel}")
 
     if timesliceModel:
-        t_ma_model = np.where((model_data['time'] >= t_min)
-                             & (model_data['time'] <= t_max))[0]
+        t_ma_model = np.where((model_data['times'] >= t_min)
+                             & (model_data['times'] <= t_max))[0]
         if len(t_ma_model) == 0:
             raise ValueError("None of the satellite data and model outputs overlap!!"
                             f"min/max sat: {sat_locations['times'][0]} / {sat_locations['times'][-1]}"
                             f"min/max model: {model_data['times'][0]} / {model_data['times'][-1]}")
         
         model_data['data'] = model_data['data'][t_ma_model, ...]
-        model_data['times'] = np.array(model_data['times'])[t_ma_model]
+        model_data['times'] = np.array(model_data['times'], dtype='datetime64[ns]')[t_ma_model]
         
     if timesliceSat:
-        t_ma_sat = np.where((sat_locations['times'] >= t_min) 
+        t_ma_sat = np.where((sat_locations['times'] >= t_min)
                             & (sat_locations['times'] < t_max))[0]
         if len(t_ma_sat) == 0:
             raise ValueError("None of the satellite data and model outputs overlap!!"
@@ -120,10 +120,9 @@ def extract_1d(sat_locations, model_data, interpVar=None,
     outVals = {iVar: [] for iVar in interpVar}
 
     if verbose:
-        print(f" -> Interpolating variables: {[model_data['vars'][i] for i in interpVar]}.")
-
+        print(f" -> Interpolating variable(s): {[model_data['vars'][i] for i in interpVar]}.")
     goceAltsAll = np.array(sat_locations["alts"])
-    goceLatsAll = np.array(sat_locations["lats"]) 
+    goceLatsAll = np.array(sat_locations["lats"])
     re = 6378.137
     rp = 6356.75
     diff = re - rp
@@ -141,11 +140,15 @@ def extract_1d(sat_locations, model_data, interpVar=None,
                 break
             
         dt = (model_data["times"][itb4] - \
-              model_data["times"][itb4 + 1]).total_seconds()
-        xt = (time - model_data["times"][itb4]).total_seconds() / dt
+              model_data["times"][itb4 + 1]) / np.timedelta64(1, 's')
+        xt = (time - model_data["times"][itb4]) / np.timedelta64(1, 's') / dt
 
         xLon = (sat_locations['lons'][i] - lons[0])/dLon
         iLon = int(xLon)
+        if iLon+1 == len(lons):
+            iLonp1 = 0
+        else:
+            iLonp1 = iLon+1
         xLon = xLon - iLon
         
         yLat = (sat_locations['lats'][i] - lats[0])/dLat
@@ -178,23 +181,23 @@ def extract_1d(sat_locations, model_data, interpVar=None,
         for iVar in interpVar:
             BeforeVal = \
                 (1-xLon)*(1-yLat)*(1-zAlt)*model_data['data'][itb4, iVar, iLon,   jLat,   kAlt]+\
-                (  xLon)*(1-yLat)*(1-zAlt)*model_data['data'][itb4, iVar, iLon+1, jLat,   kAlt]+\
+                (  xLon)*(1-yLat)*(1-zAlt)*model_data['data'][itb4, iVar, iLonp1, jLat,   kAlt]+\
                 (1-xLon)*(  yLat)*(1-zAlt)*model_data['data'][itb4, iVar, iLon,   jLat+1, kAlt]+\
-                (  xLon)*(  yLat)*(1-zAlt)*model_data['data'][itb4, iVar, iLon+1, jLat+1, kAlt]+\
+                (  xLon)*(  yLat)*(1-zAlt)*model_data['data'][itb4, iVar, iLonp1, jLat+1, kAlt]+\
                 (1-xLon)*(1-yLat)*(  zAlt)*model_data['data'][itb4, iVar, iLon,   jLat,   kAltp1]+\
-                (  xLon)*(1-yLat)*(  zAlt)*model_data['data'][itb4, iVar, iLon+1, jLat,   kAltp1]+\
+                (  xLon)*(1-yLat)*(  zAlt)*model_data['data'][itb4, iVar, iLonp1, jLat,   kAltp1]+\
                 (1-xLon)*(  yLat)*(  zAlt)*model_data['data'][itb4, iVar, iLon,   jLat+1, kAltp1]+\
-                (  xLon)*(  yLat)*(  zAlt)*model_data['data'][itb4, iVar, iLon+1, jLat+1, kAltp1]
+                (  xLon)*(  yLat)*(  zAlt)*model_data['data'][itb4, iVar, iLonp1, jLat+1, kAltp1]
             
             AfterVal = \
                 (1-xLon)*(1-yLat)*(1-zAlt)*model_data['data'][itb4+1, iVar, iLon,   jLat,   kAlt]+\
-                (  xLon)*(1-yLat)*(1-zAlt)*model_data['data'][itb4+1, iVar, iLon+1, jLat,   kAlt]+\
+                (  xLon)*(1-yLat)*(1-zAlt)*model_data['data'][itb4+1, iVar, iLonp1, jLat,   kAlt]+\
                 (1-xLon)*(  yLat)*(1-zAlt)*model_data['data'][itb4+1, iVar, iLon,   jLat+1, kAlt]+\
-                (  xLon)*(  yLat)*(1-zAlt)*model_data['data'][itb4+1, iVar, iLon+1, jLat+1, kAlt]+\
+                (  xLon)*(  yLat)*(1-zAlt)*model_data['data'][itb4+1, iVar, iLonp1, jLat+1, kAlt]+\
                 (1-xLon)*(1-yLat)*(  zAlt)*model_data['data'][itb4+1, iVar, iLon,   jLat,   kAltp1]+\
-                (  xLon)*(1-yLat)*(  zAlt)*model_data['data'][itb4+1, iVar, iLon+1, jLat,   kAltp1]+\
+                (  xLon)*(1-yLat)*(  zAlt)*model_data['data'][itb4+1, iVar, iLonp1, jLat,   kAltp1]+\
                 (1-xLon)*(  yLat)*(  zAlt)*model_data['data'][itb4+1, iVar, iLon,   jLat+1, kAltp1]+\
-                (  xLon)*(  yLat)*(  zAlt)*model_data['data'][itb4+1, iVar, iLon+1, jLat+1, kAltp1]
+                (  xLon)*(  yLat)*(  zAlt)*model_data['data'][itb4+1, iVar, iLonp1, jLat+1, kAltp1]
 
             outVals[iVar].append((1-xt) * BeforeVal + xt * AfterVal)
 
