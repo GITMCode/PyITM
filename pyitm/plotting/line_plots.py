@@ -102,6 +102,8 @@ def lineplot_data(data, outFile=None, fig=None, ax=None, vars = None,
         vars = data['vars']
     nVars = len(vars)
 
+    ylabelIn = ylabel
+    
     xSize = 10.0
     ySize = 6.0 * nVars
 
@@ -128,7 +130,6 @@ def lineplot_data(data, outFile=None, fig=None, ax=None, vars = None,
             iT = 0
             totalVals = 0.0
             dt = (times[iT] - xStart).total_seconds()/3600
-            print(dt)
             while (dt < 0):
                 iT = iT + 1
                 dt = (times[iT] - xStart).total_seconds()/3600
@@ -139,15 +140,18 @@ def lineplot_data(data, outFile=None, fig=None, ax=None, vars = None,
                 dt = (times[iT] - xStart).total_seconds()/3600
                 nPts = nPts + 1
             meanVal = totalVals / nPts
-            print(' -> subtracting : ', totalVals / nPts, iT, nPts, np.shape(vals), xStart)
+            print(' -> subtracting : ', totalVals / nPts, iT, \
+                  nPts, np.shape(vals), xStart)
             vals = (vals - meanVal) / meanVal * 100.0
         ax[iPlot].plot(times, vals, \
                        linewidth = linewidth, \
                        linestyle = linestyle, \
                        label = label, \
                        color = color)
-        if (ylabel == None):
+        if (ylabelIn == None):
             ylabel = var
+        else:
+            ylabel = ylabelIn
         ax[iPlot].set_ylabel(ylabel)
         ax[iPlot].set_xlim(xStart, xEnd)
         if (title != None):
