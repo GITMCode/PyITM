@@ -378,13 +378,6 @@ def plot_series_of_slices_wblocks(allSlices,
                                             title = '',
                                             cbar_label = '',
                                             plotShore = plotShore)
-                if (not isPole):
-                    nX = len(lon2d[:,0])
-                    nY = len(lon2d[0,:])
-                    for iX in range(0, nX, 2):
-                        ax.plot(lon2d[iX, :], lat2d[iX, :], color='k', linewidth=0.25)
-                    for iY in range(0, nY, 2):
-                        ax.plot(lon2d[:, iY], lat2d[:, iY], color='k', linewidth=0.25)
                     
         if (xLimits[1] > xLimits[0]):
             ax.set_xlim(xLimits)
