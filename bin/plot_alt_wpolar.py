@@ -199,13 +199,14 @@ if __name__ == '__main__':
                                   verbose = isVerbose, \
                                   iStart = args.iStart, \
                                   iEnd = args.iEnd, \
-                                  iStep = args.iStep)
+                                  iStep = args.iStep, \
+                                  start = args.start, \
+                                  stop = args.stop, \
+                                  time = args.time)
 
     if (not allData):
         util.list_file_info(filelist)
         exit()
-
-    allData = utils.time_slice(allData, args.start, args.stop, args.time)
 
     if (len(args.backdir) > 0):
         backfiles = util.find_files_in_different_directory(filelist, \
@@ -215,9 +216,10 @@ if __name__ == '__main__':
                                             verbose = isVerbose,
                                             iStart = args.iStart, \
                                             iEnd = args.iEnd, \
-                                            iStep = args.iStep)
-        allBackground = utils.time_slice(allBackground, args.start,
-                                         args.stop, args.time)
+                                            iStep = args.iStep, \
+                                            start = args.start, \
+                                            stop = args.stop, \
+                                            time = args.time)
         allData = utils.subtract_all_slices(allData, \
                                             allBackground, \
                                             percent = args.percent)

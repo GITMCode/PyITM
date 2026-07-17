@@ -171,8 +171,8 @@ if __name__ == '__main__':
         util.list_file_info(filelist)
         exit()
     
-    allData = util.read_all_files(filelist, varToPlot)
-    allData = utils.time_slice(allData, args.start, args.stop, args.time)
+    allData = util.read_all_files(filelist, varToPlot, start = args.start,
+                                  stop = args.stop, time = args.time)
 
     if (not allData):
         util.list_file_info(filelist)

@@ -313,13 +313,15 @@ if __name__ == '__main__':
         util.list_file_info(filelist)
         exit()
 
-    allData = util.read_all_files(filelist, varToPlot, verbose = True)
-    allData = utils.time_slice(allData, args.start, args.stop, args.time)
+    allData = util.read_all_files(filelist, varToPlot, verbose = True,
+                                  start = args.start, stop = args.stop,
+                                  time = args.time)
 
     if (len(args.backdir) > 0):
         backfiles = util.find_files_in_different_directory(filelist, dir = args.backdir)
-        allBackground = util.read_all_files(backfiles, varToPlot, verbose = True)
-        allBackground = utils.time_slice(allBackground, args.start, args.stop, args.time)
+        allBackground = util.read_all_files(backfiles, varToPlot, verbose = True,
+                                            start = args.start, stop = args.stop,
+                                            time = args.time)
         allData = utils.subtract_all_slices(allData, allBackground, percent = args.percent)
 
     if (allData['nblocks'] == 0):

@@ -64,8 +64,8 @@ if __name__ == '__main__':
     filelist = args.filelist
     varToPlot = ['e-']
 
-    allData3D = util.read_all_files(filelist, varToPlot)
-    allData3D = utils.time_slice(allData3D, args.start, args.stop, args.time)
+    allData3D = util.read_all_files(filelist, varToPlot, start = args.start,
+                                    stop = args.stop, time = args.time)
 
     lons2d = allData3D['lons'][:, :, 0]
     lats1d = allData3D['lats'][0, :, 0]

@@ -129,8 +129,9 @@ def determine_if_on2(varsToRead):
 # ----------------------------------------------------------------------------
 
 def read_all_files(filelist, varsToRead = None, verbose = False, \
-                   iStart = 0, iEnd = 0, iStep = 1):
-    
+                   iStart = 0, iEnd = 0, iStep = 1, \
+                   start = None, stop = None, time = None):
+
     filelist = any_to_filelist(filelist)
     filetype = determine_filetype(filelist[0])
     header = read_all_headers(filelist[0])
@@ -160,10 +161,15 @@ def read_all_files(filelist, varsToRead = None, verbose = False, \
         if ('NotFound' in varsToRead):
             allData = None
         else:
+            # netcdf files are subset at read time; everything else is
+            # read fully and trimmed below
             allData = netcdfio.read_netcdf_all_files(filelist, \
                                                      varsToRead, \
-                                                     verbose=verbose)
-            
+                                                     verbose=verbose, \
+                                                     start=start, \
+                                                     stop=stop, \
+                                                     time=time)
+
     if (filetype["myfile"] == filetype["iIpe"]):
         if (ipeio.is_grid_file(filelist[0])):
             allData = ipeio.read_ipe_grid_file(filelist[0])
@@ -199,6 +205,9 @@ def read_all_files(filelist, varsToRead = None, verbose = False, \
                                                    iEnd = iEnd, \
                                                    iStep = iStep)
             
+    if (filetype["myfile"] != filetype["iNetcdf"]):
+        allData = utils.time_slice(allData, start, stop, time)
+
     if (isTec):
         test = np.shape(allData['alts'])
         if (len(test) > 3):
