@@ -43,6 +43,9 @@ class DataArray(np.ndarray):
         obj.attrs = attrs
         return obj
 
+    def __array__(self, dtype=None, copy=False):
+        return np.array(self.view(np.ndarray), dtype=dtype, copy=copy)
+
     def __array_finalize__(self, obj):
         if obj is None:
             return
@@ -51,7 +54,32 @@ class DataArray(np.ndarray):
             'long_name': None
         })
 
-        
+
+def read_nc_times(ncfile, verbose=False):
+    """Convert a file's time variable to datetimes, handling
+    "[seconds/minutes/hours/days] since [date [time]]" units.
+    """
+    time_var = ncfile.variables['time']
+    units = getattr(time_var, 'units', '')
+    t0 = datetime(1965, 1, 1)
+    scale = 1.0
+    if 'since' in units:
+        head, t0_str = [s.strip() for s in units.split('since', 1)]
+        scale = {'days': 86400.0, 'hours': 3600.0,
+                 'minutes': 60.0, 'seconds': 1.0}.get(head.lower(), 1.0)
+        for fmt in ('%Y-%m-%d %H:%M:%S', '%Y-%m-%d'):
+            try:
+                t0 = datetime.strptime(t0_str, fmt)
+                break
+            except ValueError:
+                continue
+        else:
+            raise ValueError(f"Unrecognized time units: {units}")
+        if verbose:
+            print('   -> Time conversion using t0 = ', t0)
+    return tc.epoch_to_datetime(time_var[:] * scale, t0=t0)
+
+
 def read_netcdf_one_file(filename, file_vars = None, verbose = False):
     """Read all data from an Aether netcdf file.
 
@@ -130,7 +158,7 @@ def read_netcdf_one_file(filename, file_vars = None, verbose = False):
                 print('   -> Reading variable : ', key)
             try:
                 var = ncfile.variables[key]  # key is var name
-                data[key] = DataArray(np.array(var), var.__dict__)
+                data[key] = DataArray(var[:], var.__dict__)
                 data['units'][key] = var.units if 'units' in var.__dict__ else ''
             except KeyError:
                 if key =='z':
@@ -139,17 +167,7 @@ def read_netcdf_one_file(filename, file_vars = None, verbose = False):
                 else:
                     raise 
 
-        time_units = getattr(ncfile.variables['time'], 'units', '')
-        if 'since' in time_units:
-            t0 = time_units.split('since')[-1].strip()
-            t0 = datetime.strptime(t0, '%Y-%m-%d')
-            if verbose:
-                print('   -> Time conversion using t0 = ', t0)
-        else:
-            t0 = datetime(1965, 1, 1)
-
-        data['times'] = \
-            tc.epoch_to_datetime(np.array(ncfile.variables['time']), t0=t0)
+        data['times'] = read_nc_times(ncfile, verbose=verbose)
 
         try:
             data['isEnsemble'] = True if ncfile.isEnsemble == "True" else False
@@ -239,15 +257,7 @@ def read_netcdf_one_header(filename):
                 else:
                     data['longname'].append(key)
         
-        time_units = getattr(ncfile.variables['time'], 'units', '')
-        if 'since' in time_units:
-            #TODO: Get this working for seconds/days/hours
-            t0 = time_units.split('since')[-1].strip()
-            t0 = datetime.strptime(t0, '%Y-%m-%d')
-        else:
-            t0 = datetime(1965, 1, 1)
-        data['times'] = \
-            tc.epoch_to_datetime(np.array(ncfile.variables['time']), t0=t0)
+        data['times'] = read_nc_times(ncfile)
 
         try:
             data['isEnsemble'] = True if ncfile.isEnsemble == "True" else False
@@ -285,7 +295,9 @@ def read_netcdf_all_files(filelist, varlist=[-1], verbose=False):
     if len(filelist)==1:
         nTimes = len(header['times'])
     else:
-        nTimes = len(filelist)
+        # files may hold one or more times each
+        nTimes = sum(len(read_netcdf_one_header(f)['times'])
+                     for f in filelist)
     if varlist != [-1]:
        nVars = len(varlist)
     else: # varlist=[-1] means we read in all variables
@@ -317,15 +329,20 @@ def read_netcdf_all_files(filelist, varlist=[-1], verbose=False):
     # If multiiple times are in one file, we can advance time independent from 
     # the filelist loop
     iAllTimes = 0
+    nSpatialDims = len(out_shape) - 2
     for filename in filelist:
         data = read_netcdf_one_file(filename, varlist, verbose=verbose)
         for iTime in range(len(data["times"])):
             allTimes.append(data["times"][iTime])
             for iVar, var in enumerate(varlist):
+                val = data[var]
+                # some files have no time axis on the variables
+                if val.ndim > nSpatialDims:
+                    val = val[iTime, ...]
                 if (nVars == 1):
-                    allData[iAllTimes, ...] = data[var][iTime, ...]
+                    allData[iAllTimes, ...] = val
                 else:
-                    allData[iAllTimes, iVar, ...] = data[var][iTime, ...]
+                    allData[iAllTimes, iVar, ...] = val
             iAllTimes += 1
     vars = []
     lons = data.pop('Longitude' if 'Longitude' in data.keys() else 'lon')
