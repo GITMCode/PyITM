@@ -74,7 +74,28 @@ def convert_string_to_datetime(inString, format = None):
     
     return outTime
 #-----------------------------------------------------------------------------
-# 
+#
+#-----------------------------------------------------------------------------
+
+def parse_time_arg(value):
+    """Interpret a command line time argument.
+
+    Bare integers (fewer than 8 digits) are treated as time indices.
+    Anything else is parsed as a date string: either
+    'YYYY-MM-DD[?HH:MM:SS]' (any separators) or 'YYYYMMDD[_HHMMSS]'.
+    """
+    if value is None:
+        return None
+    s = str(value).strip()
+    digits = s.lstrip('-')
+    if digits.isdigit() and len(digits) < 8:
+        return int(s)
+    if s.replace('_', '').isdigit():
+        return convert_string_to_datetime(s, format = 'ymd_hms')
+    return convert_string_to_datetime(s)
+
+#-----------------------------------------------------------------------------
+#
 #-----------------------------------------------------------------------------
 
 def find_closest_times(searchTimes, desiredTimes):

@@ -2,6 +2,8 @@
 
 import numpy as np
 
+from pyitm.general import time_conversion as tc
+
 #----------------------------------------------------------------------------
 # Test to see if altitude is changing as a function of lat/lon/block
 #  - this is to test for dipole and pressure grids
@@ -437,6 +439,54 @@ def data_slice(allData3D, iLon = -1, iLat = -1, iAlt = -1, targetAlt = None):
         return outData
     else:
         return slices
+
+# ----------------------------------------------------------------------------
+# Trim allData to a range of times (start/stop, inclusive) or the single
+# time nearest to time. Each can be an int index, a datetime, or a string
+# that time_conversion.parse_time_arg understands.
+# ----------------------------------------------------------------------------
+
+def time_slice(allData, start = None, stop = None, time = None):
+
+    if start is None and stop is None and time is None:
+        return allData
+
+    start = tc.parse_time_arg(start) if isinstance(start, str) else start
+    stop = tc.parse_time_arg(stop) if isinstance(stop, str) else stop
+    time = tc.parse_time_arg(time) if isinstance(time, str) else time
+
+    times = np.asarray(allData['times'])
+    nTimes = len(times)
+
+    if time is not None:
+        if isinstance(time, int):
+            idx = np.array([time if time >= 0 else nTimes + time])
+        else:
+            idx = np.array(tc.find_closest_times(times, [time]))
+    else:
+        i0 = 0
+        i1 = nTimes - 1
+        if isinstance(start, int):
+            i0 = start if start >= 0 else nTimes + start
+        elif start is not None:
+            i0 = int(np.searchsorted(times, start, side = 'left'))
+        if isinstance(stop, int):
+            i1 = stop if stop >= 0 else nTimes + stop
+        elif stop is not None:
+            i1 = int(np.searchsorted(times, stop, side = 'right')) - 1
+        if i0 < 0 or i1 >= nTimes or i0 > i1:
+            raise ValueError(f"time_slice: no times selected! "
+                             f"(start/stop -> indices {i0}/{i1}, "
+                             f"file times {times[0]} to {times[-1]})")
+        idx = np.arange(i0, i1 + 1)
+
+    allData['data'] = allData['data'][idx, ...]
+    allData['times'] = list(times[idx])
+    if 'tec' in allData:
+        allData['tec'] = allData['tec'][idx, ...]
+    if 'ntimes' in allData:
+        allData['ntimes'] = len(idx)
+    return allData
 
 # ----------------------------------------------------------------------------
 # This function calculates the edges of cells based on the centers of the cells

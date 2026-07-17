@@ -44,6 +44,13 @@ def get_args():
     parser.add_argument('filelist', nargs='+', \
                         help = 'list files to use for generating plots')
 
+    parser.add_argument('-start',  default = None, \
+                        help = 'first time to plot (index or date string)')
+    parser.add_argument('-stop',  default = None, \
+                        help = 'last time to plot (index or date string)')
+    parser.add_argument('-time',  default = None, \
+                        help = 'only plot the time nearest this (index or date string)')
+
     args = parser.parse_args()
 
     return args
@@ -58,6 +65,7 @@ if __name__ == '__main__':
     varToPlot = ['e-']
 
     allData3D = util.read_all_files(filelist, varToPlot)
+    allData3D = utils.time_slice(allData3D, args.start, args.stop, args.time)
 
     lons2d = allData3D['lons'][:, :, 0]
     lats1d = allData3D['lats'][0, :, 0]

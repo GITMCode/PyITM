@@ -70,7 +70,14 @@ def get_args():
                         help = 'end index for time in multi-time file')
     parser.add_argument('-iStep',  default = 1, type = int, \
                         help = 'step size for time in multi-time file')
-    
+
+    parser.add_argument('-start',  default = None, \
+                        help = 'first time to plot (index or date string)')
+    parser.add_argument('-stop',  default = None, \
+                        help = 'last time to plot (index or date string)')
+    parser.add_argument('-time',  default = None, \
+                        help = 'only plot the time nearest this (index or date string)')
+
     args = parser.parse_args()
 
     return args
@@ -198,6 +205,8 @@ if __name__ == '__main__':
         util.list_file_info(filelist)
         exit()
 
+    allData = utils.time_slice(allData, args.start, args.stop, args.time)
+
     if (len(args.backdir) > 0):
         backfiles = util.find_files_in_different_directory(filelist, \
                                                            dir = args.backdir)
@@ -207,6 +216,8 @@ if __name__ == '__main__':
                                             iStart = args.iStart, \
                                             iEnd = args.iEnd, \
                                             iStep = args.iStep)
+        allBackground = utils.time_slice(allBackground, args.start,
+                                         args.stop, args.time)
         allData = utils.subtract_all_slices(allData, \
                                             allBackground, \
                                             percent = args.percent)

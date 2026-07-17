@@ -65,6 +65,13 @@ def get_args():
     parser.add_argument('filelist', nargs='+', \
                         help = 'list files to use for generating plots')
 
+    parser.add_argument('-start',  default = None, \
+                        help = 'first time to plot (index or date string)')
+    parser.add_argument('-stop',  default = None, \
+                        help = 'last time to plot (index or date string)')
+    parser.add_argument('-time',  default = None, \
+                        help = 'only plot the time nearest this (index or date string)')
+
     args = parser.parse_args()
 
     return args
@@ -307,10 +314,12 @@ if __name__ == '__main__':
         exit()
 
     allData = util.read_all_files(filelist, varToPlot, verbose = True)
+    allData = utils.time_slice(allData, args.start, args.stop, args.time)
 
     if (len(args.backdir) > 0):
         backfiles = util.find_files_in_different_directory(filelist, dir = args.backdir)
         allBackground = util.read_all_files(backfiles, varToPlot, verbose = True)
+        allBackground = utils.time_slice(allBackground, args.start, args.stop, args.time)
         allData = utils.subtract_all_slices(allData, allBackground, percent = args.percent)
 
     if (allData['nblocks'] == 0):
