@@ -45,7 +45,7 @@ shortname, longname, unit, prettyname, modelname(s), modelname(s), modelname(s),
 # ============================================================================
 # Neutral Densities
 # ============================================================================
-rho, Mass Density, kg/m3, \rho, Rho
+rho, Mass Density, kg/m3, \rho, Rho, den
 O, Neutral O Density, /m3, [O], [O(3P)], o_density, density_O, density_O_3P
 O2, Neutral O2 Density, /m3, [O_2], [O2], o2_density, density_O2
 N2, Neutral N2 Density, /m3, [N_2], [N2], n2_density, density_N2
