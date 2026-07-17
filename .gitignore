@@ -177,3 +177,7 @@ cython_debug/
 # Files created for/from tests
 champ_*
 data/gdrive
+
+# editor tempfiles
+.vscode
+*~
