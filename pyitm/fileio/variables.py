@@ -184,6 +184,7 @@ def remap_variable_names(varsIn):
 
     mapVars = {
         'Rho' : 'rho (km/m3)',
+        'den' : 'rho (km/m3)',
         '[O(3P)]': '[O] (/m3)',
         '[O2]': '[O2] (/m3)',
         '[N2]': '[N2] (/m3)',
@@ -245,6 +246,7 @@ def get_short_names(varsIn):
     
     mapVars = {
         'Rho' : 'rho',
+        'den' : 'rho',
         '[O(3P)]': 'O',
         '[O2]': 'O2',
         '[N2]': 'N2',
@@ -374,6 +376,7 @@ def get_long_names(varsIn):
 
     mapVars = {
         'Rho' : 'Mass Density (kg/m3)',
+        'den' : 'Mass Density (kg/m3)',
         '[O(3P)]': 'Neutral O Density (/m3)',
         '[O2]': 'Neutral O2 Density (/m3)',
         '[N2]': 'Neutral N2 Density (/m3)',
