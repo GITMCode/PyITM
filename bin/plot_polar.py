@@ -8,9 +8,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import argparse
 
-import sys
-sys.path.insert(0,'/home/ridley/Software/PyITM/')
-
 from pyitm.fileio import util
 from pyitm.modeldata import utils
 from pyitm.plotting import plotutils

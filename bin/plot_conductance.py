@@ -9,9 +9,6 @@ import numpy as np
 import argparse
 import glob
 
-import sys
-sys.path.insert(0,'/home/ridley/Software/PyITM/')
-
 from pyitm.fileio import gitmio
 from pyitm.modeldata import utils
 from pyitm.plotting import plotutils

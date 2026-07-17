@@ -4,9 +4,6 @@
 
 import argparse
 
-import sys
-sys.path.insert(0,'/home/ridley/Software/PyITM/')
-
 from pyitm.fileio import util
 
 def get_args():
