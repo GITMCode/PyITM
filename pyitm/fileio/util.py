@@ -5,7 +5,7 @@ import re, os
 from glob import glob
 
 from pyitm.fileio import gitmio, netcdfio, variables, satelliteio, madrigalio
-from pyitm.fileio import ipeio
+from pyitm.fileio import ipeio, wamio, waccmio
 from pyitm.modeldata import utils
 import numpy as np
 from glob import glob
@@ -33,18 +33,27 @@ def determine_filetype(filename):
         "iGitmNetcdf": 1,
         "iNetcdf": 2,
         "iIpe": 3,
+        "iWam": 4,
+        "iWaccm": 5,
         "myfile": -1
     }
     m = re.match(r'(.*)bin', filename)
     if m:
         fType["myfile"] = fType["iGitmBin"]
     else:
-
         isIpe = ipeio.check_whether_ipe(filename)
         if (isIpe):
             fType["myfile"] = fType["iIpe"]
         else:
-            fType["myfile"] = fType["iNetcdf"]
+            isWam = wamio.check_whether_wam(filename)
+            if (isWam):
+                fType["myfile"] = fType["iWam"]
+            else:
+                isWaccm = waccmio.check_whether_waccm(filename)
+                if (isWaccm):
+                    fType["myfile"] = fType["iWaccm"]
+                else:
+                    fType["myfile"] = fType["iNetcdf"]
     return fType
 
 # ----------------------------------------------------------------------------
@@ -119,7 +128,8 @@ def determine_if_on2(varsToRead):
 # ----------------------------------------------------------------------------
 # ----------------------------------------------------------------------------
 
-def read_all_files(filelist, varsToRead = None, verbose = False):
+def read_all_files(filelist, varsToRead = None, verbose = False, \
+                   iStart = 0, iEnd = 0, iStep = 1):
     
     filelist = any_to_filelist(filelist)
     filetype = determine_filetype(filelist[0])
@@ -155,9 +165,7 @@ def read_all_files(filelist, varsToRead = None, verbose = False):
                                                      verbose=verbose)
             
     if (filetype["myfile"] == filetype["iIpe"]):
-
         if (ipeio.is_grid_file(filelist[0])):
-            print(filelist[0])
             allData = ipeio.read_ipe_grid_file(filelist[0])
         else:
             varsToRead = variables.convert_number_to_var(varsToRead, header)
@@ -169,6 +177,28 @@ def read_all_files(filelist, varsToRead = None, verbose = False):
                                                       varsToRead, \
                                                       verbose=verbose)
 
+    if (filetype["myfile"] == filetype["iWam"]):
+        varsToRead = variables.convert_number_to_var(varsToRead, header)
+        varsToRead = variables.match_var_name(varsToRead, header)
+        if ('NotFound' in varsToRead):
+            allData = None
+        else:
+            allData = wamio.read_wam_all_files(filelist, \
+                                               varsToRead, \
+                                               verbose=verbose)
+    if (filetype["myfile"] == filetype["iWaccm"]):
+        varsToRead = variables.convert_number_to_var(varsToRead, header)
+        varsToRead = variables.match_var_name(varsToRead, header)
+        if ('NotFound' in varsToRead):
+            allData = None
+        else:
+            allData = waccmio.read_waccm_all_files(filelist, \
+                                                   varsToRead, \
+                                                   verbose=verbose, \
+                                                   iStart = iStart, \
+                                                   iEnd = iEnd, \
+                                                   iStep = iStep)
+            
     if (isTec):
         test = np.shape(allData['alts'])
         if (len(test) > 3):
@@ -199,6 +229,16 @@ def read_all_headers(filelist, verbose = False):
             print(' -> Reading NETCDF header --- Can only read one at a time!')
         header = netcdfio.read_netcdf_one_header(filelist[0])        
         isFound = True
+    if (filetype["myfile"] == filetype["iWam"]):
+        if (verbose):
+            print(' -> Reading WAM header --- Can only read one at a time!')
+        header = wamio.read_wam_one_header(filelist[0])        
+        isFound = True
+    if (filetype["myfile"] == filetype["iWaccm"]):
+        if (verbose):
+            print(' -> Reading WACCM header --- Can only read one at a time!')
+        header = waccmio.read_waccm_one_header(filelist[0])        
+        isFound = True
     if (filetype["myfile"] == filetype["iIpe"]):
         if (verbose):
             print(' -> Reading NETCDF IPE header --- Can only read one at a time!')
@@ -227,7 +267,9 @@ def list_file_info(filelist):
         print('%3d' % iVar, '. ', var, ' -> ', \
               header['shortname'][iVar], ' -> ',
               header['longname'][iVar])
-    print('Time of file : ', header['times'])
+    print('Times in file:')
+    for iTime, time in enumerate(header['times']):
+        print(' %3d : ' % iTime, time)
     return
 
     
