@@ -5,7 +5,7 @@ import re, os
 from glob import glob
 
 from pyitm.fileio import gitmio, netcdfio, variables, satelliteio, madrigalio
-from pyitm.fileio import ipeio, wamio, waccmio
+from pyitm.fileio import ipeio, wamio, waccmio, tiegcmio
 from pyitm.modeldata import utils
 import numpy as np
 from glob import glob
@@ -35,6 +35,7 @@ def determine_filetype(filename):
         "iIpe": 3,
         "iWam": 4,
         "iWaccm": 5,
+        "iTiegcm": 6,
         "myfile": -1
     }
     m = re.match(r'(.*)bin', filename)
@@ -49,11 +50,17 @@ def determine_filetype(filename):
             if (isWam):
                 fType["myfile"] = fType["iWam"]
             else:
-                isWaccm = waccmio.check_whether_waccm(filename)
-                if (isWaccm):
-                    fType["myfile"] = fType["iWaccm"]
+                # tiegcm must be checked before waccm - a tiegcm file
+                # also matches the waccm lat/lon/lev/time test
+                isTiegcm = tiegcmio.check_whether_tiegcm(filename)
+                if (isTiegcm):
+                    fType["myfile"] = fType["iTiegcm"]
                 else:
-                    fType["myfile"] = fType["iNetcdf"]
+                    isWaccm = waccmio.check_whether_waccm(filename)
+                    if (isWaccm):
+                        fType["myfile"] = fType["iWaccm"]
+                    else:
+                        fType["myfile"] = fType["iNetcdf"]
     return fType
 
 # ----------------------------------------------------------------------------
@@ -143,6 +150,10 @@ def read_all_files(filelist, varsToRead = None, verbose = False, \
         isTec = determine_if_tec(varsToRead)
         isOn2 = determine_if_on2(varsToRead)
 
+    if (filetype["myfile"] == filetype["iTiegcm"]):
+        # tiegcm files carry TEC directly
+        isTec = False
+
     if (isTec):
         varsToRead = ['e-']
     if (isOn2):
@@ -204,8 +215,22 @@ def read_all_files(filelist, varsToRead = None, verbose = False, \
                                                    iStart = iStart, \
                                                    iEnd = iEnd, \
                                                    iStep = iStep)
-            
-    if (filetype["myfile"] != filetype["iNetcdf"]):
+
+    if (filetype["myfile"] == filetype["iTiegcm"]):
+        varsToRead = variables.convert_number_to_var(varsToRead, header)
+        varsToRead = variables.match_var_name(varsToRead, header)
+        if ('NotFound' in varsToRead):
+            allData = None
+        else:
+            allData = tiegcmio.read_tiegcm_all_files(filelist, \
+                                                     varsToRead, \
+                                                     verbose=verbose, \
+                                                     start=start, \
+                                                     stop=stop, \
+                                                     time=time)
+
+    if (filetype["myfile"] not in \
+        (filetype["iNetcdf"], filetype["iTiegcm"])):
         allData = utils.time_slice(allData, start, stop, time)
 
     if (isTec):
@@ -246,7 +271,12 @@ def read_all_headers(filelist, verbose = False):
     if (filetype["myfile"] == filetype["iWaccm"]):
         if (verbose):
             print(' -> Reading WACCM header --- Can only read one at a time!')
-        header = waccmio.read_waccm_one_header(filelist[0])        
+        header = waccmio.read_waccm_one_header(filelist[0])
+        isFound = True
+    if (filetype["myfile"] == filetype["iTiegcm"]):
+        if (verbose):
+            print(' -> Reading TIEGCM header --- Can only read one at a time!')
+        header = tiegcmio.read_tiegcm_one_header(filelist[0])
         isFound = True
     if (filetype["myfile"] == filetype["iIpe"]):
         if (verbose):
