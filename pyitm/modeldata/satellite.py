@@ -42,6 +42,11 @@ def extract_1d(sat_locations, model_data, interpVar=None,
     t_min = max(min(sat_locations['times']), min(model_data['times']))
     t_max = min(max(sat_locations['times']), max(model_data['times']))
 
+    if t_min > t_max:
+        raise ValueError("None of the satellite data and model outputs overlap!!"
+                        f"min/max sat: {sat_locations['times'][0]} / {sat_locations['times'][-1]}"
+                        f"min/max model: {model_data['times'][0]} / {model_data['times'][-1]}")
+
     timesliceModel = False
     timesliceSat = False
     if not skipTimeCheck:
@@ -55,15 +60,14 @@ def extract_1d(sat_locations, model_data, interpVar=None,
         print(f" --> timesliceSat: {timesliceSat}, timesliceModel: {timesliceModel}")
 
     if timesliceModel:
-        t_ma_model = np.where((model_data['times'] >= t_min)
-                             & (model_data['times'] <= t_max))[0]
-        if len(t_ma_model) == 0:
-            raise ValueError("None of the satellite data and model outputs overlap!!"
-                            f"min/max sat: {sat_locations['times'][0]} / {sat_locations['times'][-1]}"
-                            f"min/max model: {model_data['times'][0]} / {model_data['times'][-1]}")
-        
+        # keep the model times bracketing the sat window, not just those inside it
+        i0 = max(np.searchsorted(model_data['times'], t_min, side='right') - 1, 0)
+        i1 = min(np.searchsorted(model_data['times'], t_max, side='left') + 1,
+                 len(model_data['times']))
+        t_ma_model = np.arange(i0, i1)
+
         model_data['data'] = model_data['data'][t_ma_model, ...]
-        model_data['times'] = np.array(model_data['times'], dtype='datetime64[ns]')[t_ma_model]
+        model_data['times'] = model_data['times'][t_ma_model]
         
     if timesliceSat:
         t_ma_sat = np.where((sat_locations['times'] >= t_min)
