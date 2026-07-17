@@ -441,21 +441,18 @@ def data_slice(allData3D, iLon = -1, iLat = -1, iAlt = -1, targetAlt = None):
         return slices
 
 # ----------------------------------------------------------------------------
-# Trim allData to a range of times (start/stop, inclusive) or the single
-# time nearest to time. Each can be an int index, a datetime, or a string
-# that time_conversion.parse_time_arg understands.
+# Resolve start/stop (inclusive) or time (nearest) against a sorted list of
+# times, returning the selected indices. Each argument can be an int index,
+# a datetime, or a string that time_conversion.parse_time_arg understands.
 # ----------------------------------------------------------------------------
 
-def time_slice(allData, start = None, stop = None, time = None):
-
-    if start is None and stop is None and time is None:
-        return allData
+def resolve_time_indices(times, start = None, stop = None, time = None):
 
     start = tc.parse_time_arg(start) if isinstance(start, str) else start
     stop = tc.parse_time_arg(stop) if isinstance(stop, str) else stop
     time = tc.parse_time_arg(time) if isinstance(time, str) else time
 
-    times = np.asarray(allData['times'])
+    times = np.asarray(times)
     nTimes = len(times)
 
     if time is not None:
@@ -475,10 +472,25 @@ def time_slice(allData, start = None, stop = None, time = None):
         elif stop is not None:
             i1 = int(np.searchsorted(times, stop, side = 'right')) - 1
         if i0 < 0 or i1 >= nTimes or i0 > i1:
-            raise ValueError(f"time_slice: no times selected! "
+            raise ValueError(f"no times selected! "
                              f"(start/stop -> indices {i0}/{i1}, "
                              f"file times {times[0]} to {times[-1]})")
         idx = np.arange(i0, i1 + 1)
+
+    return idx
+
+# ----------------------------------------------------------------------------
+# Trim allData to a range of times (start/stop, inclusive) or the single
+# time nearest to time.
+# ----------------------------------------------------------------------------
+
+def time_slice(allData, start = None, stop = None, time = None):
+
+    if start is None and stop is None and time is None:
+        return allData
+
+    idx = resolve_time_indices(allData['times'], start, stop, time)
+    times = np.asarray(allData['times'])
 
     allData['data'] = allData['data'][idx, ...]
     allData['times'] = list(times[idx])

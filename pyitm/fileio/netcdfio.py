@@ -7,6 +7,7 @@ import numpy as np
 from pyitm.fileio import util
 from pyitm.fileio import variables
 from pyitm.general import time_conversion as tc
+from pyitm.modeldata import utils as mutils
 
 from netCDF4 import Dataset
 
@@ -148,6 +149,27 @@ def estimate_read_size(inventory, varlist = None, nTimes = None):
     if nTimes is None:
         nTimes = inventory['ntimes']
     return sum(inventory['varinfo'][v]['nbytes'] for v in varlist) * nTimes
+
+
+def check_signature_groups(inventory, varlist):
+    """Refuse to read variables together when they live on different grids.
+
+    Two dim signatures (dims minus time) are compatible when one is a
+    subset of the other (e.g. TEC on (lat, lon) with Tn on (lon, lat, z)).
+    """
+    sigs = {}
+    for var in varlist:
+        dims = inventory['varinfo'][var]['dims']
+        sig = tuple(d for d in dims if d != 'time')
+        sigs.setdefault(sig, []).append(var)
+
+    maximal = [s for s in sigs
+               if not any(set(s) < set(t) for t in sigs)]
+    if len(maximal) > 1:
+        lines = [f"   {s} : {sigs[s]}" for s in sigs]
+        raise ValueError("Variables are on different grids and cannot be "
+                         "read together.\nPick var(s) from one group:\n" +
+                         '\n'.join(lines))
 
 
 def read_netcdf_one_file(filename, file_vars = None, verbose = False):
@@ -347,7 +369,8 @@ def read_netcdf_one_header(filename):
 # This reads in a series of vars / files and returns the 3D information
 #-----------------------------------------------------------------------------
 
-def read_netcdf_all_files(filelist, varlist=[-1], verbose=False):
+def read_netcdf_all_files(filelist, varlist=[-1], verbose=False,
+                          start=None, stop=None, time=None):
 
     filelist = util.any_to_filelist(filelist)
 
@@ -358,29 +381,35 @@ def read_netcdf_all_files(filelist, varlist=[-1], verbose=False):
         raise ValueError("Multiple output types cannot be read by this " +
                          "function.\n\tProvided: " + str(prefixes))
 
-    # first read in spatial information:
-    # vars = ['lon', 'Longitude', 'lat', 'Latitude', 'z', 'Altitude']
-    # spatialData = read_netcdf_one_file(filelist[0], vars, verbose=False)
-
+    inventory = read_netcdf_inventory(filelist, verbose=verbose)
     header = read_netcdf_one_header(filelist[0])
-    if len(filelist)==1:
-        nTimes = len(header['times'])
-    else:
-        # files may hold one or more times each
-        nTimes = sum(len(read_netcdf_one_header(f)['times'])
-                     for f in filelist)
+
     if varlist != [-1]:
        nVars = len(varlist)
     else: # varlist=[-1] means we read in all variables
         varlist = header['vars']
         nVars = len(varlist)
+    check_signature_groups(inventory, varlist)
+
+    # resolve start/stop/time against the global time index so only the
+    # selected times are read from disk
+    if start is None and stop is None and time is None:
+        iSelected = np.arange(inventory['ntimes'])
+    else:
+        iSelected = mutils.resolve_time_indices(inventory['times'],
+                                                start, stop, time)
+    nTimes = len(iSelected)
+    allTimes = [inventory['times'][i] for i in iSelected]
+
+    if verbose:
+        est = estimate_read_size(inventory, varlist, nTimes)
+        print(' -> Reading %d vars x %d times, ~%.1f MB' %
+              (nVars, nTimes, est / 1e6))
 
     nBlocks = header['nblocks']
     nLons = header['nlons']
     nLats = header['nlats']
     nAlts = header['nalts']
-
-    allTimes = []
 
     # Make output holder! its shape is conditional. Order of axis:
     # nTimes, nVars, nBlocks, nLons, nLats, nAlts
@@ -397,33 +426,49 @@ def read_netcdf_all_files(filelist, varlist=[-1], verbose=False):
 
     allData = np.zeros(out_shape)
 
-    # We may be reading a file with multiple times...
-    # If multiiple times are in one file, we can advance time independent from 
-    # the filelist loop
-    iAllTimes = 0
     nSpatialDims = len(out_shape) - 2 if nVars > 1 else len(out_shape) - 1
-    for filename in filelist:
-        data = read_netcdf_one_file(filename, varlist, verbose=verbose)
-        for iTime in range(len(data["times"])):
-            allTimes.append(data["times"][iTime])
-            for iVar, var in enumerate(varlist):
-                val = data[var]
-                # some files have no time axis on the variables
-                if val.ndim > nSpatialDims:
-                    val = val[iTime, ...]
-                if (nVars == 1):
-                    allData[iAllTimes, ...] = val
-                else:
-                    allData[iAllTimes, iVar, ...] = val
-            iAllTimes += 1
-    vars = []
-    lons = data.pop('Longitude' if 'Longitude' in data.keys() else 'lon')
-    lats = data.pop('Latitude' if 'Latitude' in data.keys() else 'lat')
-    alts = data.pop('Altitude' if 'Altitude' in data.keys() else 'z')
+    ncfile = None
+    iOpen = -1
+    for iOut, i in enumerate(iSelected):
+        iFile = inventory['ifile'][i]
+        if iFile != iOpen:
+            if ncfile is not None:
+                ncfile.close()
+            if verbose:
+                print('-> Reading netcdf : ', filelist[iFile],
+                      ' --> Vars : ', varlist)
+            ncfile = Dataset(filelist[iFile], 'r')
+            iOpen = iFile
+        iLocal = inventory['ilocal'][i]
+        for iVar, var in enumerate(varlist):
+            v = ncfile.variables[var]
+            # some files have no time axis on the variables
+            val = v[iLocal, ...] if 'time' in v.dimensions else v[:]
+            # a subset signature (e.g. 2D var in a 3D file) fills all alts
+            if val.ndim < nSpatialDims:
+                val = val[..., np.newaxis]
+            if (nVars == 1):
+                allData[iOut, ...] = val
+            else:
+                allData[iOut, iVar, ...] = val
+
+    lons = np.asarray(ncfile.variables[
+        'Longitude' if 'Longitude' in ncfile.variables else 'lon'][:])
+    lats = np.asarray(ncfile.variables[
+        'Latitude' if 'Latitude' in ncfile.variables else 'lat'][:])
+    if 'Altitude' in ncfile.variables:
+        alts = np.asarray(ncfile.variables['Altitude'][:])
+    elif 'z' in ncfile.variables:
+        alts = np.asarray(ncfile.variables['z'][:])
+    else:
+        alts = np.array([100])
+    ncfile.close()
+
     # Coordinates may already be multi-dimensional (blocked grids store per-point values).
     # Only meshgrid when all three are 1D coordinate vectors.
     if lons.ndim == 1 and lats.ndim == 1 and alts.ndim == 1:
         lons, lats, alts = np.meshgrid(lons, lats, alts, indexing='ij')
+    vars = []
     for var in varlist:
         vars.append(var)
 
