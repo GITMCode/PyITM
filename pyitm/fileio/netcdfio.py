@@ -256,7 +256,8 @@ def read_netcdf_one_header(filename):
                                                 'long_name'))
                 else:
                     data['longname'].append(key)
-        
+        data['nvars'] = len(data['vars'])
+
         data['times'] = read_nc_times(ncfile)
 
         try:
@@ -313,10 +314,11 @@ def read_netcdf_all_files(filelist, varlist=[-1], verbose=False):
 
     # Make output holder! its shape is conditional. Order of axis:
     # nTimes, nVars, nBlocks, nLons, nLats, nAlts
-    # If nBlocks==1, it's squeezed
+    # If nBlocks==1, it's squeezed. Same for nVars (like gitmio)
     out_shape = []
     out_shape.append(nTimes)
-    out_shape.append(nVars)
+    if nVars > 1:
+        out_shape.append(nVars)
     if nBlocks > 1:
         out_shape.append(nBlocks)
     out_shape.append(nLons)
@@ -329,7 +331,7 @@ def read_netcdf_all_files(filelist, varlist=[-1], verbose=False):
     # If multiiple times are in one file, we can advance time independent from 
     # the filelist loop
     iAllTimes = 0
-    nSpatialDims = len(out_shape) - 2
+    nSpatialDims = len(out_shape) - 2 if nVars > 1 else len(out_shape) - 1
     for filename in filelist:
         data = read_netcdf_one_file(filename, varlist, verbose=verbose)
         for iTime in range(len(data["times"])):
