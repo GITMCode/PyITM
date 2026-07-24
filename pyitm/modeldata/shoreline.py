@@ -23078,8 +23078,8 @@ def shoreline():
     y = pos[:, 1]
     z = pos[:, 2]
 
-    lat = -np.acos(z) * 180.0/np.pi + 90.0
-    lon = (np.atan2(y,x) * 180.0/np.pi + 360.0) % 360.0
+    lat = -np.arccos(z) * 180.0/np.pi + 90.0
+    lon = (np.arctan2(y,x) * 180.0/np.pi + 360.0) % 360.0
 
     startlen = lon.shape[0]
     for i in range(startlen-1):
