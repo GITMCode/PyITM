@@ -56,6 +56,82 @@ def weighted_mean(var, weights):
     return ave
 
 # ----------------------------------------------------------------------------
+# Write out a simple netcdf file
+# ----------------------------------------------------------------------------
+
+def write_netcdf(filefront, data, isVerbose=False):
+
+    # filename will be frontfile_YYYYMMDD_HHMMSS.nc
+    # Data should contain:
+    #   lon1d - in deg
+    #   lat1d - in deg
+    #   tec2d - in TECU (nlons, nlats)
+    #   time - as a datetime (a scalar)
+    #   model - a string that says what model this is from (a scalar)
+    #   version - a float that can be tried to a model run (a scalar)
+    
+    time = data['time'][0]
+    filename = filefront + '_' + time.strftime('%Y%m%d_%H%M%S.nc')
+    
+    if isVerbose:
+        print(" --> Creating netCDF file:", filename)
+    
+    # get dimensions:
+    nx = len(data["lon1d"])
+    ny = len(data["lat1d"])
+
+    with Dataset(filename, mode="w", format="NETCDF4") as ncfile:
+        # Dimensions
+        t = ncfile.createDimension('time', None)
+        xdim = ncfile.createDimension('lon', nx)
+        ydim = ncfile.createDimension('lat', ny)
+
+        # time!
+        reftime = datetime.date(1965, 1, 1)
+        time = ncfile.createVariable('time', np.float64, ('time',))
+        time.units = 'seconds since ' + str(reftime)
+        time.long_name = 'time'
+        time[0] = [(data['time'] 
+                    - datetime.datetime(reftime.year, \
+                                        reftime.month, \
+                                        reftime.day)).total_seconds()]
+
+        if isVerbose:
+            print(" --> Created dataset with dimensions:")
+            [print(dim) for dim in ncfile.dimensions.items()]
+        
+        # Add in attributes. Version, etc.
+        ncfile.title = "2D TEC Model Output"
+        ncfile.model = data['model']
+        ncfile.version = data['version']
+
+        if isVerbose:
+            print(" --> Attributes added. Current ncfile:")
+            print(ncfile)
+
+        # We'll try to add the coordinates, if they can be added cleanly...
+        lon = ncfile.createVariable('lon', np.float64, ('lon'))
+        lon[:] = data['lon1d']
+        lon.units = 'degrees_east'
+        lon.long_name = 'Longitude'
+
+        lat = ncfile.createVariable('lat', np.float64, ('lat'))
+        lat[:] = data['lat1d']
+        lat.units = 'degrees_north'
+        lat.long_name = 'Latitude'
+
+        unit = None
+        tec = ncfile.createVariable('TEC', np.float64, ('lon', 'lat'))
+        tec = data['tec2d']
+        tec.units = 'TECU'
+        tec.long_name = 'Total Electron Content'
+
+        ncfile.close()
+
+    return
+
+
+# ----------------------------------------------------------------------------
 # Needed to run main script as the default executable from the command line
 # ----------------------------------------------------------------------------
 
@@ -97,6 +173,10 @@ if __name__ == '__main__':
     # just say we have one alt at 100 km:
     gitmData['alts'] = 100.0
 
+    print(gitmData['times'])
+    exit()
+
+    
     iTimes = time_conversion.find_closest_times(tecData['times'], gitmData['times'])
 
     # need to re-arrange the data to use canned functions:
