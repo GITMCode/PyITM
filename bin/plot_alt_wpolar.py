@@ -25,8 +25,13 @@ def get_args():
     parser = argparse.ArgumentParser(
         description = 'Plot Aether / GITM model results')
     
+    parser.add_argument('-v',  \
+                        action='store_true', default = False, \
+                        help = 'set verbose')
+    
     # select altitude to plot:
-    parser.add_argument('-alt', metavar = 'alt', default = 400.0, type = float, \
+    parser.add_argument('-alt', metavar = 'alt', \
+                        default = 400.0, type = float, \
                         help = 'altitude :  alt in km (closest)') 
 
     # variable to plot as a number
@@ -41,13 +46,13 @@ def get_args():
                         help = 'manually set the maxiumum value for the plots')
     
     parser.add_argument('-latmin',  default = -90, type = float, \
-                        help = 'manually set the minimum latitude for the plots')
+                        help = 'set the minimum latitude for the plots')
     parser.add_argument('-latmax',  default = 90, type = float, \
-                        help = 'manually set the maxiumum latitude for the plots')
+                        help = 'set the maxiumum latitude for the plots')
     parser.add_argument('-lonmin',  default = 0, type = float, \
-                        help = 'manually set the minimum longitude for the plots')
+                        help = 'set the minimum longitude for the plots')
     parser.add_argument('-lonmax',  default = 360, type = float, \
-                        help = 'manually set the maxiumum latitude for the plots')
+                        help = 'set the maxiumum latitude for the plots')
 
     # directory to use as a background, so you can subtract one run from another
     parser.add_argument('-backdir',  \
@@ -65,10 +70,16 @@ def get_args():
     parser.add_argument('filelist', nargs='+', \
                         help = 'list files to use for generating plots')
 
+    parser.add_argument('-iStart',  default = 0, type = int, \
+                        help = 'start index for time in multi-time file')
+    parser.add_argument('-iEnd',  default = 0, type = int, \
+                        help = 'end index for time in multi-time file')
+    parser.add_argument('-iStep',  default = 1, type = int, \
+                        help = 'step size for time in multi-time file')
+    
     args = parser.parse_args()
 
     return args
-
 
 # ----------------------------------------------------------------------------
 # This assumes you have no blocks, and an easily defined grid
@@ -76,15 +87,13 @@ def get_args():
 
 def plot_sphere(args, allData):
 
-    alts1d = allData['alts'][0, 0, :]
-    diff = np.abs(alts1d - altGoal)
-    iAlt = np.argmin(diff)
-    realAlt = alts1d[iAlt]
+    altGoal = args.alt
+    sliceData = utils.data_slice(allData, targetAlt = altGoal)
+    allSlices = sliceData['slices']
+    realAlt = sliceData['realAlt']
+    lons2d = sliceData['lons2d']
+    lats2d = sliceData['lats2d']
 
-    lons2d = allData['lons'][:, :, iAlt]
-    lats2d = allData['lats'][:, :, iAlt]
-
-    allSlices = utils.data_slice(allData, iAlt = iAlt)
     varName = allData['longname'][0]
     sVarNum = allData['shortname'][0] + '_'
     sAltNum = 'alt%04d_' % int(realAlt)
@@ -101,7 +110,8 @@ def plot_sphere(args, allData):
     # get min and max values, plus color table:
     dataMinMax = plotutils.get_min_max_data(allSlices, None, \
                                             color = 'red', \
-                                            minVal = args.mini, maxVal = args.maxi)
+                                            minVal = args.mini, \
+                                            maxVal = args.maxi)
 
     sFilePre = sVarNum + sAltNum
     sTitleAdd = '; Alt: %.0f km' % realAlt
@@ -126,12 +136,13 @@ def plot_sphere(args, allData):
 
 def plot_cubesphere(args, allData):
 
-    alts1d = allData['alts'][0, 0, 0, :]
-    diff = np.abs(alts1d - altGoal)
-    iAlt = np.argmin(diff)
-    realAlt = alts1d[iAlt]
+    altGoal = args.alt
+    sliceData = utils.data_slice(allData, targetAlt = altGoal)
+    allSlices = sliceData['slices']
+    realAlt = sliceData['realAlt']
+    lons3d = sliceData['lons2d']
+    lats3d = sliceData['lats2d']
 
-    allSlices = utils.data_slice(allData, iAlt = iAlt)
     varName = allData['longname'][0]
     sVarNum = allData['shortname'][0] + '_'
     sAltNum = 'alt%04d_' % int(realAlt)
@@ -148,10 +159,11 @@ def plot_cubesphere(args, allData):
     # get min and max values, plus color table:
     dataMinMax = plotutils.get_min_max_data(allSlices, None, \
                                             color = 'red', \
-                                            minVal = args.mini, maxVal = args.maxi)
+                                            minVal = args.mini, \
+                                            maxVal = args.maxi)
     
-    lons3d = allData['lons'][:, :, :, iAlt]
-    lats3d = allData['lats'][:, :, :, iAlt]
+    #lons3d = allData['lons'][:, :, :, iAlt]
+    #lats3d = allData['lats'][:, :, :, iAlt]
     
     sFilePre = sVarNum + sAltNum
     sTitleAdd = '; Alt: %.0f km' % realAlt
@@ -176,21 +188,34 @@ if __name__ == '__main__':
     args = get_args()
     filelist = args.filelist
     varToPlot = args.var
+    isVerbose = args.v
 
     if (args.list):
         util.list_file_info(filelist)
         exit()
-    
-    allData = util.read_all_files(filelist, varToPlot)
+
+    allData = util.read_all_files(filelist, varToPlot, \
+                                  verbose = isVerbose, \
+                                  iStart = args.iStart, \
+                                  iEnd = args.iEnd, \
+                                  iStep = args.iStep)
 
     if (not allData):
         util.list_file_info(filelist)
         exit()
 
     if (len(args.backdir) > 0):
-        backfiles = util.find_files_in_different_directory(filelist, dir = args.backdir)
-        allBackground = util.read_all_files(backfiles, varToPlot, verbose = True)
-        allData = utils.subtract_all_slices(allData, allBackground, percent = args.percent)
+        backfiles = util.find_files_in_different_directory(filelist, \
+                                                           dir = args.backdir)
+        allBackground = util.read_all_files(backfiles, \
+                                            varToPlot, \
+                                            verbose = isVerbose,
+                                            iStart = args.iStart, \
+                                            iEnd = args.iEnd, \
+                                            iStep = args.iStep)
+        allData = utils.subtract_all_slices(allData, \
+                                            allBackground, \
+                                            percent = args.percent)
 
     altGoal = args.alt
     

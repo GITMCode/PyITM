@@ -188,6 +188,22 @@ def read_logfile(logfilename=None, datadir=None, verbose=False):
                 print(f"  -> Could not convert column '{col}' to float. Leaving as string.")
             pass
 
+    logdata['times'] = calc_times(logdata)
+
+    exclude = ['Year',
+               'Month',
+               'Day',
+               'Hour',
+               'Minute',
+               'Second',
+               'times',
+               'vars']
+    
+    logdata['vars'] = []
+    for var in logdata.keys():
+        if (not(var in exclude)):
+            logdata['vars'].append(var)
+            
     return logdata
 
 

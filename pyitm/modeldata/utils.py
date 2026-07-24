@@ -4,26 +4,34 @@ import numpy as np
 
 #----------------------------------------------------------------------------
 # Test to see if altitude is changing as a function of lat/lon/block
-#  - this is really to test for the dipole grid
+#  - this is to test for dipole and pressure grids
 #----------------------------------------------------------------------------
 
 def calc_if_same_alts(altsWblock3d):
 
     isSame = True
-    nBlocks = len(altsWblock3d[:, 0, 0, 0])
+    if (len(np.shape(altsWblock3d)) == 4):
+        nBlocks = len(altsWblock3d[:, 0, 0, 0])
+        nAlts = len(altsWblock3d[0, 0, 0, :])
+        for iAlt in range(nAlts):
+            reference = altsWblock3d[0, 0, 0, iAlt]
+            small = 1e-6 * reference
 
-    nAlts = len(altsWblock3d[0, 0, 0, :])
-
-    for iAlt in range(nAlts):
-        reference = altsWblock3d[0, 0, 0, iAlt]
-        small = 1e-6 * reference
-
-        for iBlock in range(nBlocks):
-            alts2d = altsWblock3d[iBlock, :, :, iAlt]
-            if (np.abs(alts2d[0,0] - reference) > small):
+            for iBlock in range(nBlocks):
+                alts2d = altsWblock3d[iBlock, :, :, iAlt]
+                if (np.abs(alts2d[0,0] - reference) > small):
+                    isSame = False
+                if (np.abs(alts2d[-1,-1] - reference) > small):
+                    isSame = False
+    else:
+        nAlts = len(altsWblock3d[0, 0, :])
+        for iAlt in range(nAlts):
+            reference = altsWblock3d[0, 0, iAlt]
+            small = 1e-6 * reference
+            alts2d = altsWblock3d[:, :, iAlt]
+            if (np.mean(np.abs(alts2d - reference)) > small):
                 isSame = False
-            if (np.abs(alts2d[-1,-1] - reference) > small):
-                isSame = False
+
     return isSame
 
 #----------------------------------------------------------------------------
@@ -63,13 +71,19 @@ def find_alts_oneblock(alts3d, goalAlt):
 
     nLons, nLats, nAlts = np.shape(alts3d)
 
-    iAlts = np.zeros((nLons, nLats)).astype('int')
-
+    iAlts = np.zeros((nLons, nLats))
+    indices = np.linspace(0, nAlts-1, nAlts)
+    
     for iLon in range(nLons):
         for iLat in range(nLats):
-            diff = np.abs(goalAlt - alts3d[iLon, iLat, :])
-            iAlts[iLon, iLat] = np.argmin(diff)
-
+            alts1d = alts3d[iLon, iLat, :]
+            if ((goalAlt >= alts1d[0]) and (goalAlt <= alts1d[-2])):
+                diff = goalAlt - alts1d
+                iA = int(indices[diff < 0][0]) - 1
+                r = (goalAlt - alts1d[iA]) / (alts1d[iA + 1] - alts1d[iA])
+                iAlts[iLon, iLat] = iA + r
+            else:
+                iAlts[iLon, iLat] = -1
     return iAlts
 
 #-----------------------------------------------------------------------------
@@ -86,7 +100,7 @@ def find_alts(alts, goalAlt, blocks = False):
         nBlocks = 0
     elif (nDims == 4):
         nBlocks, nLons, nLats, nAlts = sizes
-        iAlts = np.zeros((nBlocks, nLons, nLats)).astype('int')
+        iAlts = np.zeros((nBlocks, nLons, nLats))
     else:
         print('Dont understand dimensions of alts in find_alts')
         iAlt = -1
@@ -186,7 +200,16 @@ def slice_alt_with_array(var3d, iAlt):
     for iLon in range(nLons):
         for iLat in range(nLats):
             iAlt_ = iAlt[iLon, iLat]
-            slice2d[iLon, iLat] = var3d[iLon, iLat, iAlt_]
+            r = iAlt_ - np.floor(iAlt_)
+            if (iAlt_ > 0):
+                slice2d[iLon, iLat] = \
+                    (1.0 - r) * var3d[iLon, iLat, int(iAlt_)] + \
+                    (r) * var3d[iLon, iLat, int(iAlt_) + 1]
+            else:
+                slice2d[iLon, iLat] = -1e32
+                
+    globalMean = np.mean(slice2d[slice2d > -1e31])
+    slice2d[slice2d < -1e31] = globalMean
     return slice2d
 
 # ----------------------------------------------------------------------------
@@ -203,7 +226,15 @@ def slice_alt_with_array_block(var4d, iAlt):
         for iLon in range(nLons):
             for iLat in range(nLats):
                 iAlt_ = iAlt[iBlock, iLon, iLat]
-                slice3d[iBlock, iLon, iLat] = var4d[iBlock, iLon, iLat, iAlt_]
+                r = iAlt_ - np.floor(iAlt_)
+                if (iAlt_ > 0):
+                    slice3d[iBlock, iLon, iLat] = \
+                        (1.0 - r) * var4d[iBlock, iLon, iLat, int(iAlt_)] + \
+                        (r) * var4d[iBlock, iLon, iLat, int(iAlt_) + 1]
+                else:
+                    slice3d[iBlock, iLon, iLat] = -1e32
+    globalMean = np.mean(slice3d[slice3d > -1e31])
+    slice3d[slice3d < -1e31] = globalMean
     return slice3d
 
 # ----------------------------------------------------------------------------
@@ -265,7 +296,7 @@ def slice_lon_5d(var5d, iLon):
 # [nTimes, nLons, nLats, nAlts]
 # ----------------------------------------------------------------------------
 
-def data_slice(allData3D, iLon = -1, iLat = -1, iAlt = -1):
+def data_slice(allData3D, iLon = -1, iLat = -1, iAlt = -1, targetAlt = None):
 
     nTimes = allData3D['ntimes']
     nVars = allData3D['nvars']
@@ -275,13 +306,36 @@ def data_slice(allData3D, iLon = -1, iLat = -1, iAlt = -1):
     nBlocks = allData3D['nblocks']
     doAltCut = False
     altArray = False
+    isAltTimeVarying = False
     if (np.isscalar(iAlt)):
         if (iAlt > -1):
             doAltCut = True
     else:
         doAltCut = True
         altArray = True
-    
+
+    if (targetAlt):
+        doAltCut = True
+        altArray = not calc_if_same_alts(allData3D['alts'])
+        realAlt = targetAlt
+        if (not altArray):
+            if (nBlocks == 0):
+                alts1d = allData3D['alts'][0, 0, :]
+            else:
+                alts1d = allData3D['alts'][0, 0, 0, :]
+            diff = np.abs(alts1d - targetAlt)
+            iAlt = np.argmin(diff)
+            realAlt = alts1d[iAlt]
+        else:
+            if ('allalts' in allData3D.keys()):
+                isAltTimeVarying = True
+            else:
+                isAltTimeVarying = False
+                if (nBlocks == 0):
+                    iAlt = find_alts(allData3D['alts'], targetAlt, blocks = False)
+                else:
+                    iAlt = find_alts(allData3D['alts'], targetAlt, blocks = True)
+                    
     # This has become somewhat complicated to handle all of the different cases:
     # nVars == 1 vs nVars > 1
     # nBlocks = 0 vs block-based arrays
@@ -339,10 +393,18 @@ def data_slice(allData3D, iLon = -1, iLat = -1, iAlt = -1):
             else:
                 if (nBlocks == 0):
                     for iTime in range(nTimes):
+                        if (isAltTimeVarying):
+                            iAlt = find_alts(allData3D['allalts'][iTime, :, :, :], \
+                                             targetAlt, \
+                                             blocks = False)                        
                         slices[iTime, :, :] = \
                             slice_alt_with_array(allData3D['data'][iTime, :, :, :], iAlt)
                 else:
                     for iTime in range(nTimes):
+                        if (isAltTimeVarying):
+                            iAlt = find_alts(allData3D['allalts'][iTime, :, :, :, :], \
+                                             targetAlt, \
+                                             blocks = False)                        
                         slices[iTime, :, :, :] = \
                             slice_alt_with_array_block(allData3D['data'][iTime, :, :, :, :], iAlt)
 
@@ -355,7 +417,26 @@ def data_slice(allData3D, iLon = -1, iLat = -1, iAlt = -1):
             else:
                 slices = slice_lon_5d(allData3D['data'], iLon)
 
-    return slices
+    if (targetAlt):
+        if (np.isscalar(iAlt)):
+            lons2d = allData3D['lons'][:, :, iAlt]
+            lats2d = allData3D['lats'][:, :, iAlt]
+        else:
+            # This assumes that the lats and lons are time independent:
+            if (nBlocks == 0):
+                lons2d = slice_alt_with_array(allData3D['lons'], iAlt)
+                lats2d = slice_alt_with_array(allData3D['lats'], iAlt)
+            else:
+                lons2d = slice_alt_with_array_block(allData3D['lons'], iAlt)
+                lats2d = slice_alt_with_array_block(allData3D['lats'], iAlt)
+            
+        outData = {'slices': slices,
+                   'lons2d': lons2d,
+                   'lats2d': lats2d,
+                   'realAlt': realAlt}
+        return outData
+    else:
+        return slices
 
 # ----------------------------------------------------------------------------
 # This function calculates the edges of cells based on the centers of the cells

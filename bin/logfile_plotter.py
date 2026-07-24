@@ -250,7 +250,7 @@ if len(filenames) > 1:
                                      xEnd = xEnd)
 else:
     # just plot single file
-    print('plotting...')
+    print(' -> plotting a single file ...')
     line_plots.lineplot_data(data_to_plot, outFile=args.plotfile,
                              logScale = args.log,
                              dpi = args.dpi,

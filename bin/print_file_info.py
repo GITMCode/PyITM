@@ -29,13 +29,14 @@ if __name__ == '__main__':
     args = get_args()
     filelist = args.filelist
 
-    header = util.read_header(filelist)
+    header = util.read_all_headers(filelist)
+    print(header)
 
     print('File information:')
-    print(' -> nLats : ', header['nLats'])
-    print(' -> nLons : ', header['nLons'])
-    print(' -> nAlts : ', header['nAlts'])
-    print(' -> nVars : ', header['nVars'])
-    for i in range(header['nVars']):
+    print(' -> nLats : ', header['nlats'])
+    print(' -> nLons : ', header['nlons'])
+    print(' -> nAlts : ', header['nalts'])
+    print(' -> nVars : ', header['nvars'])
+    for i in range(header['nvars']):
         print('  -> %3d : ' % i, header['vars'][i], '->', 
               header['shortname'][i], '->', header['longname'][i])

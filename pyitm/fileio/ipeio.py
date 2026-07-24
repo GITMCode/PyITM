@@ -29,6 +29,9 @@ def check_whether_ipe(filename):
             ('phony_dim_1' in ncfile.dimensions) and \
             ('phony_dim_2' in ncfile.dimensions)):
             state = True
+        if ('o_n2_ratio' in ncfile.variables.keys()):
+            # This means that it is probably a WAM file!
+            state = False
     ncfile.close
     return state
 
