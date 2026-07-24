@@ -7,6 +7,9 @@ mpl.use('Agg')
 import matplotlib.pyplot as plt
 import numpy as np
 import argparse
+from netCDF4 import Dataset
+import datetime
+import os
 
 from pyitm.fileio import util, madrigalio, gitmio, logfile
 from pyitm.modeldata import satellite
@@ -41,6 +44,15 @@ def get_args():
                         action='store_true', default = False, \
                         help = 'dont plot all of the maps')
     
+    parser.add_argument('-output',  \
+                        action='store_true', default = False, \
+                        help = 'output TEC to nc files')
+
+    parser.add_argument('-front', default = 'modeltec', \
+                        help = 'front of file for nc output')
+    parser.add_argument('-dir', default = '.', \
+                        help = 'output directory for all files')
+    
     args = parser.parse_args()
 
     return args
@@ -70,8 +82,8 @@ def write_netcdf(filefront, data, isVerbose=False):
     #   model - a string that says what model this is from (a scalar)
     #   version - a float that can be tried to a model run (a scalar)
     
-    time = data['time'][0]
-    filename = filefront + '_' + time.strftime('%Y%m%d_%H%M%S.nc')
+    time = data['time']
+    filename = filefront + time.strftime('_%Y%m%d_%H%M%S.nc')
     
     if isVerbose:
         print(" --> Creating netCDF file:", filename)
@@ -85,6 +97,7 @@ def write_netcdf(filefront, data, isVerbose=False):
         t = ncfile.createDimension('time', None)
         xdim = ncfile.createDimension('lon', nx)
         ydim = ncfile.createDimension('lat', ny)
+        zdim = ncfile.createDimension('z', 1)
 
         # time!
         reftime = datetime.date(1965, 1, 1)
@@ -110,23 +123,30 @@ def write_netcdf(filefront, data, isVerbose=False):
             print(ncfile)
 
         # We'll try to add the coordinates, if they can be added cleanly...
-        lon = ncfile.createVariable('lon', np.float64, ('lon'))
-        lon[:] = data['lon1d']
+        lon = ncfile.createVariable('lon', np.float64, ('lon', 'lat', 'z'))
+        for iLat in range(len(data['lat1d'])):
+            lon[:, iLat, 0] = data['lon1d']
         lon.units = 'degrees_east'
         lon.long_name = 'Longitude'
 
-        lat = ncfile.createVariable('lat', np.float64, ('lat'))
-        lat[:] = data['lat1d']
+        lat = ncfile.createVariable('lat', np.float64, ('lon', 'lat', 'z'))
+        for iLon in range(len(data['lon1d'])):
+            lat[iLon, :, 0] = data['lat1d']
         lat.units = 'degrees_north'
         lat.long_name = 'Latitude'
 
+        alt = ncfile.createVariable('z', np.float64, ('lon', 'lat', 'z'))
+        alt[:,:,:] = [100.0]
+        alt.units = 'km'
+        alt.long_name = 'Altitude'
+        
         unit = None
-        tec = ncfile.createVariable('TEC', np.float64, ('lon', 'lat'))
-        tec = data['tec2d']
+        tec = ncfile.createVariable('ModelTEC', np.float64, ('lon', 'lat', 'z'))
+        tec[:,:,0] = data['tec2d']
         tec.units = 'TECU'
         tec.long_name = 'Total Electron Content'
 
-        ncfile.close()
+        #ncfile.close()
 
     return
 
@@ -143,6 +163,11 @@ if __name__ == '__main__':
     filelist = util.any_to_filelist(input_data = filelist)
     lookup = args.lookup
     verbose = args.v
+
+    if (not os.path.isdir(args.dir)):
+        print('Directory does not exist : ', args.dir)
+        print('  -> Please create this directory!')
+        exit()
     
     f1 = util.read_all_headers(filelist[0])
     f2 = util.read_all_headers(filelist[-1])
@@ -152,8 +177,13 @@ if __name__ == '__main__':
     tecData = util.read_satfiles(satLookup=lookup, satname='gps', 
                                  startDate=f1['times'][0],
                                  endDate=f2['times'][0],
-                                 verbose=verbose)['gps']
-
+                                 verbose=verbose) # ['gps']
+    if (len(tecData) == 0):
+        print('Cant find any TEC data.  Please check TEC database!')
+        exit()
+    else:    
+        tecData = tecData['gps']
+    
     # make some assumptions here about the TEC grid:
     nLats, nLons, nTimes = np.shape(tecData['tec'])
     dLat = 180.0/nLats
@@ -162,21 +192,35 @@ if __name__ == '__main__':
     lons1d = (np.arange(0.0 + dLon/2, 360.0, dLon) + 180.0) % 360.0
     lons2d, lats2d = np.meshgrid(lons1d, lats1d)
 
-    gitmData = util.read_all_files(filelist, varsToRead = 'tec', verbose = verbose)
+    gitmData = util.read_all_files(filelist, \
+                                   varsToRead = 'tec', \
+                                   verbose = verbose)
     # need to reformulate the gitm data to fit into the canned functions:
     nTimesGitm, nLonsGitm, nLatsGitm = np.shape(np.squeeze(gitmData['tec']))
 
     # code needs a 1 for number of variables and number of altitudes:
-    gitmData['data'] = gitmData['tec'].reshape(nTimesGitm, 1, nLonsGitm, nLatsGitm, 1)
+    gitmData['data'] = gitmData['tec'].reshape(nTimesGitm, \
+                                               1, \
+                                               nLonsGitm, \
+                                               nLatsGitm, \
+                                               1)
     gitmData['vars'] = ['tec']
 
     # just say we have one alt at 100 km:
     gitmData['alts'] = 100.0
 
-    print(gitmData['times'])
-    exit()
-
-    
+    if (args.output):
+        print('-> Writing TEC output to nc files...')
+        tecDataDict = {'lon1d': gitmData['lons'][:, 0, 0],
+                       'lat1d': gitmData['lats'][0, :, 0],
+                       'model': 'unknown',
+                       'version': 0.0}
+        front = args.dir + '/' + args.front
+        for iTime, time in enumerate(gitmData['times']):
+            tecDataDict['tec2d'] = gitmData['data'][iTime, 0, :, :, 0]
+            tecDataDict['time'] = time
+            write_netcdf(front, tecDataDict, isVerbose = verbose)
+            
     iTimes = time_conversion.find_closest_times(tecData['times'], gitmData['times'])
 
     # need to re-arrange the data to use canned functions:
@@ -210,7 +254,8 @@ if __name__ == '__main__':
             tecLocs['iStart'].append(tecLocs['iEnd'][-1])
             tecLocs['iEnd'].append(len(tecInfo['times']))
 
-    gitmTEC = satellite.extract_1d(tecInfo, gitmData, extrapolate=False, interpVar=[0],
+    gitmTEC = satellite.extract_1d(tecInfo, gitmData, extrapolate=False, \
+                                   interpVar=[0], \
                                    skipTimeCheck=True, verbose=verbose)
 
     dataMinMax = plotutils.get_min_max_data(tecInfo['tec'], None, \
@@ -281,8 +326,8 @@ if __name__ == '__main__':
             cbar2 = fig.colorbar(con2, ax = ax2, shrink = 0.5, pad = 0.02)
             cbar2.set_label('TEC Measurements', rotation=90)
 
-            filenamePrefix = 'gitm_compare_tec_'
-            sTimeOut = tecInfo['times'][iS].strftime('%Y%m%d_%H%M%S')
+            filenamePrefix = args.dir + '/' + args.front
+            sTimeOut = tecInfo['times'][iS].strftime('_%Y%m%d_%H%M%S')
             outFile = filenamePrefix + sTimeOut + '.png'
             print(" ==> Writing file : ", outFile)
             fig.savefig(outFile, dpi = dpi)
@@ -345,7 +390,7 @@ if __name__ == '__main__':
     cbar1.set_label('TEC Model Results', rotation=90)
     cbar2 = fig.colorbar(con2, ax = ax2, shrink = 0.5, pad = 0.02)
     cbar2.set_label('TEC Measurement Data', rotation=90)
-    filenamePrefix = 'gitm_compare_tec_american_'
+    filenamePrefix = args.dir + '/' + args.front + '_american_'
     sTimeOut = tecInfo['times'][0].strftime('%Y%m%d')
     outFile = filenamePrefix + sTimeOut + '.png'
     print(" ==> Writing file : ", outFile)
@@ -387,8 +432,8 @@ if __name__ == '__main__':
     ax1.set_xlabel('Time from ' + sTime + ' to ' + eTime)
 
     # Write out a log file so other plots can be made at a later time:
-    filenamePrefix = 'gitm_compare_tec_'
-    sTimeOut = tecInfo['times'][0].strftime('%Y%m%d')
+    filenamePrefix = args.dir + '/' + args.front
+    sTimeOut = tecInfo['times'][0].strftime('_%Y%m%d')
     outFile = filenamePrefix + sTimeOut + '.png'
     print(" ==> Writing file : ", outFile)
     fig.savefig(outFile, dpi = dpi)
@@ -408,5 +453,5 @@ if __name__ == '__main__':
                'AmericannRMS': americannRms,
                'AmericanDiff': americanDiff}
 
-    logfile.write_log(logData, fileHeader = 'gitm_tec')
+    logfile.write_log(logData, fileHeader = args.dir + '/' + args.front)
     
