@@ -83,30 +83,57 @@ def calc_times(logdata):
     vars = list(logdata.keys())
     if ('Year' in vars):
         iYear = vars.index('Year')
+        sYear = 'Year'
+    if ('year' in vars):
+        iYear = vars.index('year')
+        sYear = 'year'
     if ('Month' in vars):
         iMonth = vars.index('Month')
+        sMonth = 'Month'
+    if ('mo' in vars):
+        iMonth = vars.index('mo')
+        sMonth = 'mo'
     if ('Day' in vars):
         iDay = vars.index('Day')
+        sDay = 'Day'
+    if ('dy' in vars):
+        iDay = vars.index('dy')
+        sDay = 'dy'
     if ('Hour' in vars):
         iHour = vars.index('Hour')
+        sHour = 'Hour'
+    if ('hr' in vars):
+        iHour = vars.index('hr')
+        sHour = 'hr'
     if ('Minute' in vars):
         iMinute = vars.index('Minute')
+        sMinute = 'Minute'
+    if ('mn' in vars):
+        iMinute = vars.index('mn')
+        sMinute = 'mn'
     if ('Second' in vars):
         iSecond = vars.index('Second')
+        sSecond = 'Second'
+    if ('sc' in vars):
+        iSecond = vars.index('sc')
+        sSecond = 'sc'
     if ((iYear >= 0) and
         (iMonth >= 0) and
         (iDay >= 0) and
         (iHour >= 0) and
         (iMinute >= 0) and
         (iSecond >= 0)):
-        for i, year in enumerate(logdata['Year']):
+        print('Found correct time variables, converting...')
+        for i, year in enumerate(logdata[sYear]):
             t = datetime(int(year),
-                         int(logdata['Month'][i]),
-                         int(logdata['Day'][i]),
-                         int(logdata['Hour'][i]),
-                         int(logdata['Minute'][i]),
-                         int(logdata['Second'][i]))
+                         int(logdata[sMonth][i]),
+                         int(logdata[sDay][i]),
+                         int(logdata[sHour][i]),
+                         int(logdata[sMinute][i]),
+                         int(logdata[sSecond][i]))
             times.append(t)
+    else:
+        print('Did not file correct time variables. Probably will not work.')
     return times
 
 #-----------------------------------------------------------------------------
@@ -144,7 +171,7 @@ def read_logfile(logfilename=None, datadir=None, verbose=False):
     logdata = {}
 
     saving = False
-    readVars = True
+    readVars = False
     with open(logfilename, 'r') as f:
         for n, line in enumerate(f.readlines()):
             if (readVars):

@@ -126,14 +126,13 @@ def read_netcdf_one_file(filename, file_vars = None, verbose = False):
             data[key] = DataArray(np.array(var), var.__dict__)
             data['units'][key] = var.units if 'units' in var.__dict__ else ''
 
-        if 'since' in ncfile.variables['time'].units:
-            t0 = ncfile.variables['time'].units.split('since')[-1].strip()
-            t0 = datetime.strptime(t0, '%Y-%m-%d')
-            if verbose:
-                print('   -> Time conversion using t0 = ', t0)
-        else:
-            t0 = datetime(1965, 1, 1)
-
+        t0 = datetime(1965, 1, 1)
+        if hasattr(ncfile.variables['time'], 'units'):
+            if 'since' in ncfile.variables['time'].units:
+                t0 = ncfile.variables['time'].units.split('since')[-1].strip()
+                t0 = datetime.strptime(t0, '%Y-%m-%d')
+                if verbose:
+                    print('   -> Time conversion using t0 = ', t0)
         data['times'] = \
             tc.epoch_to_datetime(np.array(ncfile.variables['time'])[0], t0=t0)
 
@@ -225,12 +224,11 @@ def read_netcdf_one_header(filename):
                 else:
                     data['longname'].append(key)
         
-        if 'since' in ncfile.variables['time'].units:
-            t0 = ncfile.variables['time'].units.split('since')[-1].strip()
-            t0 = datetime.strptime(t0, '%Y-%m-%d')
-            
-        else:
-            t0 = datetime(1965, 1, 1)
+        t0 = datetime(1965, 1, 1)
+        if hasattr(ncfile.variables['time'], 'units'):
+            if 'since' in ncfile.variables['time'].units:
+                t0 = ncfile.variables['time'].units.split('since')[-1].strip()
+                t0 = datetime.strptime(t0, '%Y-%m-%d')
         data['times'] = \
             tc.epoch_to_datetime(np.array(ncfile.variables['time']), t0=t0)
 
