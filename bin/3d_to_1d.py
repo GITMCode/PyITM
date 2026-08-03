@@ -15,13 +15,19 @@ from pyitm.general import time_conversion, geometry
 def get_args():
 
     parser = argparse.ArgumentParser(description = \
-                                     'Calculate values and write logfile')
+                                     'Take a 3D file and make a 1D file')
 
     parser.add_argument('filelist', nargs = '+', \
                         help = 'Files to process')
     parser.add_argument('-ngcs',
                         default = 2, type = int, \
                         help = 'number of ghostcells')
+    parser.add_argument('-lat',
+                        default = None, type = float, \
+                        help = 'extract only this location (lat)')
+    parser.add_argument('-lon',
+                        default = None, type = float, \
+                        help = 'extract only this location (lon)')
     parser.add_argument('-integral',  \
                         action='store_true', default = False, \
                         help = 'Calculate integral instead of mean')
@@ -38,7 +44,20 @@ if __name__ == '__main__':
     filelist = args.filelist
     nGCs = args.ngcs
     doIntegral = args.integral
-    
+    doExtractPoint = False
+
+    if ((args.lat) and (args.lon)):
+        doExtractPoint = True
+        latExtract = args.lat
+        lonExtract = args.lon
+
+    if ((args.lat) and (not args.lon)):
+        print('Provided lat, but not lon!  Must provide both or neither!')
+        exit()
+    if ((not args.lat) and (args.lon)):
+        print('Provided lon, but not lat!  Must provide both or neither!')
+        exit()
+        
     allData = util.read_all_files(filelist)
 
     if (not allData):
@@ -71,6 +90,16 @@ if __name__ == '__main__':
     lons2d = allData['lons'][:,:,0]
     lats2d = allData['lats'][:,:,0]
 
+    if (doExtractPoint):
+        print('Extracting single column!')
+        dlon = np.abs(lons2d[:,0] - lonExtract)
+        iLon_ = np.argmin(dlon)
+        dlat = np.abs(lats2d[0,:] - latExtract)
+        iLat_ = np.argmin(dlat)
+        print(' -> Closest Point:')
+        print('    Lat : ', lats2d[iLon_, iLat_])
+        print('    Lon : ', lons2d[iLon_, iLat_])
+    
     for iAlt in range(nAlts):
         realAlt = allData['alts'][0,0,iAlt]
         area2d = geometry.calc_areas(lons2d, lats2d, realAlt)
@@ -93,17 +122,19 @@ if __name__ == '__main__':
         dataOut['time'] = allData['times'][iTime]
         
         for iVar, var in enumerate(vars):
+            vals3d = allData['data'][iTime, iVar, :, :, :]
             for iAlt in range(nAlts):
-
-                vals2d = allData['data'][iTime, iVar, nGCs:-nGCs, nGCs:-nGCs, iAlt]
-                area2d = area3d[nGCs:-nGCs, nGCs:-nGCs, iAlt]
-                integral = np.sum(area2d * vals2d)
-                if args.integral:
-                    dataOut[var][0,0,iAlt] = integral
+                if (doExtractPoint):
+                    vals2d = vals3d[nGCs:-nGCs, nGCs:-nGCs, iAlt]
+                    area2d = area3d[nGCs:-nGCs, nGCs:-nGCs, iAlt]
+                    integral = np.sum(area2d * vals2d)
+                    if args.integral:
+                        dataOut[var][0,0,iAlt] = integral
+                    else:
+                        value = integral / totalarea1d[iAlt]
+                        dataOut[var][0,0,iAlt] = value
                 else:
-                    value = integral / totalarea1d[iAlt]
-                    dataOut[var][0,0,iAlt] = value
-
+                    dataOut[var][0,0,iAlt] = vals3d[iLon_, iLat_, iAlt]
         gitmio.write_gitm_file(fileOut, dataOut, isVerbose = True)
                 
         # need to write out:
