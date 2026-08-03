@@ -135,7 +135,7 @@ if __name__ == '__main__':
                 sVarNum = sVarNum + 'diff_'
 
         if (args.log):
-            allSlices = np.log(allSlices)
+            allSlices = np.log10(allSlices)
             varName = 'log(' + varName + ')'
             sVarNum = 'log_' + sVarNum
         
