@@ -170,7 +170,9 @@ def match_var_name(varsIn, header):
         if (not isFound):
             varsOut.append('NotFound')
             print('Could not find variable : ', varIn)
-            print('  -> Should be able to list variables by putting -list or running with -verbose')
+            print('  Vars in file: ')
+            for var in header['vars']:
+                print('   ' + var)
             raise KeyError
 
     return varsOut
@@ -247,6 +249,7 @@ def get_short_names(varsIn):
     mapVars = {
         'Rho' : 'rho',
         'den' : 'rho',
+        'ElectricPotential' : 'cpcp',
         '[O(3P)]': 'O',
         '[O2]': 'O2',
         '[N2]': 'N2',
@@ -377,6 +380,7 @@ def get_long_names(varsIn):
     mapVars = {
         'Rho' : 'Mass Density (kg/m3)',
         'den' : 'Mass Density (kg/m3)',
+        'cpcp' : 'Cross Polar Cap Potential (kV)',
         '[O(3P)]': 'Neutral O Density (/m3)',
         '[O2]': 'Neutral O2 Density (/m3)',
         '[N2]': 'Neutral N2 Density (/m3)',
