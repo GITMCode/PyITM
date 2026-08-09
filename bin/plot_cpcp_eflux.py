@@ -10,7 +10,7 @@ import argparse
 
 from pyitm.fileio import util, controlfile, logfile
 from pyitm.general import geometry
-
+from pyitm.plotting import line_plots, axes
 
 # ----------------------------------------------------------------------------
 # Get arguments as inputs into the code
@@ -57,15 +57,12 @@ if __name__ == '__main__':
     Altitude = 120.0
     area2d = geometry.calc_areas(lons2d, lats2d, Altitude)
     
-    print(np.shape(allData3D['times']))
-
     if (np.max(lats2d) > 80.0):
         containsNorth = True
         maskNorth = lats2d > 0.0
     if (np.min(lats2d) < -80.0):
         containsSouth = True
         maskSouth = lats2d < 0.0
-
         
     logData = { 'times': [], \
                 'alt': Altitude, \
@@ -98,6 +95,52 @@ if __name__ == '__main__':
         else:
             logData['northCPCP'].append(0.0)
             logData['northPower'].append(0.0)
-            
+
     logfile.write_log(logData, fileHeader = 'cpcp_hp', \
                       message = 'CPCP and HP extracted using plot_cpcp_eflux')
+
+    dpi = 120
+    fig = plt.figure(figsize=(10, 10), dpi = dpi)
+
+    yBot = 0.06
+    yTop = 0.05
+    yBuf = 0.06
+    ax = axes.get_axes_one_column(fig,
+                                  2,
+                                  yBot,
+                                  yTop,
+                                  yBuf)
+    outFile = 'cpcp_hp_' + logData['times'][0].strftime('%Y%m%d') + '.png'
+    line_plots.lineplot_data(logData, vars = ['northCPCP'],
+                             fig = fig, \
+                             ax = [ax[0]], \
+                             linewidth = 1.0, \
+                             color = 'k', \
+                             label = 'North CPCP', \
+                             linestyle = None,
+                             ylabel = 'Cross Polar Cap Potential (kV)')
+    line_plots.lineplot_data(logData, vars = ['southCPCP'],
+                             fig = fig, \
+                             ax = [ax[0]], \
+                             linewidth = 1.0, \
+                             color = 'r', \
+                             linestyle = None,
+                             label = ['South CPCP'], \
+                             ylabel = 'Cross Polar Cap Potential (kV)', \
+                             title = None)
+    line_plots.lineplot_data(logData, vars = ['northPower'],
+                             fig = fig, \
+                             ax = [ax[1]], \
+                             label = ['North HP'], \
+                             ylabel = 'Hemispheric Power (GW)', \
+                             linewidth = 1.0, \
+                             color = 'k')
+    line_plots.lineplot_data(logData, vars = ['southPower'],
+                             fig = fig, \
+                             ax = [ax[1]], \
+                             label = ['South HP'], \
+                             ylabel = 'Hemispheric Power (GW)', \
+                             linewidth = 1.0, \
+                             color = 'r', \
+                             outFile = outFile)
+    
