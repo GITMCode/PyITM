@@ -66,15 +66,12 @@ def load_remote_file(remoteFile, IsVerbose = False):
         user = remote['user']
         server = remote['server']
         dir = remote['dir']
+        # Check remote system inputs:
+        IsRemote = check_inputs(user, server, dir, IsVerbose = IsVerbose)
+        if (IsVerbose):
+            print(' -> Checking if remote file is good : ', IsRemote)
     else:
-        user = args.user
-        server = args.server
-        dir = args.dir
-
-    # Check remote system inputs:
-    IsRemote = check_inputs(user, server, dir, IsVerbose = IsVerbose)
-    if (IsVerbose):
-        print(' -> Checking if remote file is good : ', IsRemote)
+        IsRemote = False
         
     return IsRemote, user, server, dir
 
