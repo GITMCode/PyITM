@@ -72,6 +72,9 @@ def load_remote_file(remoteFile, IsVerbose = False):
             print(' -> Checking if remote file is good : ', IsRemote)
     else:
         IsRemote = False
+        user = None
+        server = None
+        dir = None
         
     return IsRemote, user, server, dir
 
