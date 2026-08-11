@@ -62,15 +62,6 @@ if __name__ == '__main__':  # main code block
     IsRemote, user, server, dir = \
         remote.load_remote_file(args.remotefile, IsVerbose = IsVerbose)
 
-    DoRemove = False
     didWork = remote.pull_files(files, user, server, dir, doRemove, \
                                 IsVerbose = IsVerbose)
-    
-    #remote = user + '@' + server + ':' + dir + '/'
-    #
-    #m = re.search('(.*)(star)(.*)', files)
-    #if m:
-    #    files = '"' + m.group(1) + '*' + m.group(3) + '"'
-    #remote = remote + files
-    #command = 'rsync -v ' + remote + ' .'
-    #system.run_command(command)
+
