@@ -88,7 +88,7 @@ def plot_sphere(args, allData, plotNorth = True, plotSouth = True):
     # get min and max values, plus color table:
     dataMinMax = plotutils.get_min_max_data(allSlices, None, \
                      color = 'red', \
-                     minVal = 1e32, maxVal = -1e32)
+                     minVal = args.mini, maxVal = args.maxi)
 
     sFilePre = sVarNum + sAltNum
     sTitleAdd = '; Alt: %.0f km' % realAlt
@@ -129,7 +129,7 @@ def plot_cubesphere(args, allData):
     # get min and max values, plus color table:
     dataMinMax = plotutils.get_min_max_data(allSlices, None, \
                      color = 'red', \
-                     minVal = 1e32, maxVal = -1e32)
+                     minVal = args.mini, maxVal = args.maxi)
     
     lons3d = allData['lons'][:, :, :, iAlt]
     lats3d = allData['lats'][:, :, :, iAlt]
