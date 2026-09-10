@@ -87,36 +87,54 @@ def calc_times(logdata):
     if ('year' in vars):
         iYear = vars.index('year')
         sYear = 'year'
+    if ('yyyy' in vars):
+        iYear = vars.index('yyyy')
+        sYear = 'yyyy'
     if ('Month' in vars):
         iMonth = vars.index('Month')
         sMonth = 'Month'
     if ('mo' in vars):
         iMonth = vars.index('mo')
         sMonth = 'mo'
+    if ('mm' in vars):
+        iMonth = vars.index('mm')
+        sMonth = 'mm'
     if ('Day' in vars):
         iDay = vars.index('Day')
         sDay = 'Day'
     if ('dy' in vars):
         iDay = vars.index('dy')
         sDay = 'dy'
+    if ('dd' in vars):
+        iDay = vars.index('dd')
+        sDay = 'dd'
     if ('Hour' in vars):
         iHour = vars.index('Hour')
         sHour = 'Hour'
     if ('hr' in vars):
         iHour = vars.index('hr')
         sHour = 'hr'
+    if ('HH' in vars):
+        iHour = vars.index('HH')
+        sHour = 'HH'
     if ('Minute' in vars):
         iMinute = vars.index('Minute')
         sMinute = 'Minute'
     if ('mn' in vars):
         iMinute = vars.index('mn')
         sMinute = 'mn'
+    if ('MM' in vars):
+        iMinute = vars.index('MM')
+        sMinute = 'MM'
     if ('Second' in vars):
         iSecond = vars.index('Second')
         sSecond = 'Second'
     if ('sc' in vars):
         iSecond = vars.index('sc')
         sSecond = 'sc'
+    if ('SS' in vars):
+        iSecond = vars.index('SS')
+        sSecond = 'SS'
     if ((iYear >= 0) and
         (iMonth >= 0) and
         (iDay >= 0) and
