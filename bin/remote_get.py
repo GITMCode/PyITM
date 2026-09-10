@@ -42,6 +42,10 @@ def parse_args_post():
                         help = 'remove remote files after getting',
                         action = 'store_true')
     
+    parser.add_argument('-rsync',
+                        help = 'use rsync to get directory',
+                        action = 'store_true')
+    
     args = parser.parse_args()
 
     return args
@@ -62,6 +66,12 @@ if __name__ == '__main__':  # main code block
     IsRemote, user, server, dir = \
         remote.load_remote_file(args.remotefile, IsVerbose = IsVerbose)
 
-    didWork = remote.pull_files(files, user, server, dir, doRemove, \
-                                IsVerbose = IsVerbose)
+    if (args.rsync):
+        # do something
+        dir = dir + '/' + files
+        didWork = remote.pull_dir_with_rsync(files, user, server, dir, \
+                                             IsVerbose = IsVerbose)
+    else:
+        didWork = remote.pull_files(files, user, server, dir, doRemove, \
+                                    IsVerbose = IsVerbose)
 
