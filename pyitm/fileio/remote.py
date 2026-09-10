@@ -218,3 +218,24 @@ def pull_files(files, user, server, dir, DoRemove, IsVerbose = False):
                     time.sleep(5)
 
     return DidWork
+
+
+# ----------------------------------------------------------------------
+# Pull a directory using rsync
+#    (don't remove files!)
+# ----------------------------------------------------------------------
+
+def pull_dir_with_rsync(files, user, server, dir, IsVerbose = False):
+
+    DidWork = True
+    
+    remote = user + '@' + server + ':'
+    outfile = '.output_rsync_log'
+
+    command = "rsync -rav " + user + "@" + server + ":" + dir + ' .'
+
+    if (IsVerbose):
+        print('Running rsync command')
+    DidWork = system.run_command(command, verbose = IsVerbose)
+
+    return DidWork
